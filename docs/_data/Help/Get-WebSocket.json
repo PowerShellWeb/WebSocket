@@ -48,7 +48,7 @@
     {
       "Title": "EXAMPLE 4",
       "Markdown": "",
-      "Code": "$emojiPattern = '[\\p{IsHighSurrogates}\\p{IsLowSurrogates}\\p{IsVariationSelectors}\\p{IsCombiningHalfMarks}]+)'\nwebsocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |\n    Foreach-Object {\n        $in = $_\n        if ($in.commit.record.text -match \"(?>(?:$emojiPattern|\\#\\w+)\"\") {\n            Write-Host $matches.0 -NoNewline\n        }\n    }"
+      "Code": "$emojiPattern = '[\\p{IsHighSurrogates}\\p{IsLowSurrogates}\\p{IsVariationSelectors}\\p{IsCombiningHalfMarks}]+)'\nwebsocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |\n    Foreach-Object {\n        $in = $_\n        if ($in.commit.record.text -match \"(?>(?:$emojiPattern|\\#\\w+)\") {\n            Write-Host $matches.0 -NoNewline\n        }\n    }"
     }
   ]
 }
