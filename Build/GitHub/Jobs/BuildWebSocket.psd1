@@ -22,7 +22,12 @@
             id = 'PipeScript'
         },        
         'RunEZOut',
-        'RunHelpOut'
+        'RunHelpOut',
+        @{
+            name = 'Use PSJekyll Action'
+            uses = 'PowerShellWeb/PSJekyll@main'
+            id = 'PSJekyll'
+        },
         <#@{
             name = 'Run WebSocket (on branch)'
             if   = '${{github.ref_name != ''main''}}'
