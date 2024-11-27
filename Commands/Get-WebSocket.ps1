@@ -15,7 +15,16 @@ function Get-WebSocket {
             Foreach-Object {
                 $in = $_
                 if ($in.commit.record.text -match '[\p{IsHighSurrogates}\p{IsLowSurrogates}]+') {
-                    $matches.0 
+                    Write-Host $matches.0 -NoNewline
+                }
+            }
+    .EXAMPLE
+        $emojiPattern = '[\p{IsHighSurrogates}\p{IsLowSurrogates}\p{IsVariationSelectors}\p{IsCombiningHalfMarks}]+)'
+        websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |
+            Foreach-Object {
+                $in = $_
+                if ($in.commit.record.text -match "(?>(?:$emojiPattern|\#\w+)"") {
+                    Write-Host $matches.0 -NoNewline
                 }
             }
     #>
@@ -63,7 +72,8 @@ function Get-WebSocket {
     [ScriptBlock]
     $OnWarning,
 
-    # If set, will tail the output of the WebSocket job, outputting results continuously instead of outputting a websocket job.    
+    # If set, will watch the output of the WebSocket job, outputting results continuously instead of outputting a websocket job.    
+    [Alias('Tail')]
     [switch]
     $Watch,
 
