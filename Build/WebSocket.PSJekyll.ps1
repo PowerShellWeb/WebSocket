@@ -1,4 +1,4 @@
-$sitePath = Join-Path $PSScriptRoot 'docs'
+$sitePath = Join-Path ($PSScriptRoot | Split-Path) 'docs'
 
 $sourceModule = Get-Module PSJekyll
 if (-not $sourceModule) { 
