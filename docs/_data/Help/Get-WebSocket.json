@@ -43,7 +43,12 @@
     {
       "Title": "EXAMPLE 3",
       "Markdown": "",
-      "Code": "websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |\n    Foreach-Object {\n        $in = $_\n        if ($in.commit.record.text -match '[\\p{IsHighSurrogates}\\p{IsLowSurrogates}]+') {\n            $matches.0 \n        }\n    }"
+      "Code": "websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |\n    Foreach-Object {\n        $in = $_\n        if ($in.commit.record.text -match '[\\p{IsHighSurrogates}\\p{IsLowSurrogates}]+') {\n            Write-Host $matches.0 -NoNewline\n        }\n    }"
+    },
+    {
+      "Title": "EXAMPLE 4",
+      "Markdown": "",
+      "Code": "$emojiPattern = '[\\p{IsHighSurrogates}\\p{IsLowSurrogates}\\p{IsVariationSelectors}\\p{IsCombiningHalfMarks}]+)'\nwebsocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |\n    Foreach-Object {\n        $in = $_\n        if ($in.commit.record.text -match \"(?>(?:$emojiPattern|\\#\\w+)\"\") {\n            Write-Host $matches.0 -NoNewline\n        }\n    }"
     }
   ]
 }
