@@ -93,6 +93,7 @@ foreach ($variant in '','Animated') {
         Fill='#4488FF'
         Class='foreground-fill'
         DominantBaseline='middle'
+        TextAnchor='middle'
     }
 
     svg -Content @(
