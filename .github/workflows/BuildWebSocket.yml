@@ -504,6 +504,9 @@ jobs:
         uses: StartAutomating/EZOut@master
       - name: UseHelpOut
         uses: StartAutomating/HelpOut@master
+      - name: Use PSJekyll Action
+        uses: PowerShellWeb/PSJekyll@main
+        id: PSJekyll
       - name: Log in to ghcr.io
         uses: docker/login-action@master
         with: 
