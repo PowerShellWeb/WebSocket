@@ -20,7 +20,7 @@
     </svg>
   </symbol>
   <use href="#PowerShellWeb" height="60%" width="60%" x="20%" y="20%" />
-  <text x="42%" y="50%" font-family="Noto Sans" font-size="4.2em" style="font-family:&quot;Noto Sans&quot;,sans-serif" fill="#4488FF" class="foreground-fill" dominant-baseline="middle">||</text>
-  <text x="54%" y="50%" font-family="Noto Sans" font-size="4.2em" style="font-family:&quot;Noto Sans&quot;,sans-serif" fill="#4488FF" class="foreground-fill" dominant-baseline="middle">||</text>
-  <text x="50%" y="80%" font-family="Noto Sans" font-size="4.2em" style="font-family:&quot;Noto Sans&quot;,sans-serif" fill="#4488FF" class="foreground-fill" dominant-baseline="middle">WebSocket</text>
+  <text x="42%" y="50%" font-family="Noto Sans" font-size="4.2em" style="font-family:&quot;Noto Sans&quot;,sans-serif" fill="#4488FF" class="foreground-fill" dominant-baseline="middle" text-anchor="middle">||</text>
+  <text x="54%" y="50%" font-family="Noto Sans" font-size="4.2em" style="font-family:&quot;Noto Sans&quot;,sans-serif" fill="#4488FF" class="foreground-fill" dominant-baseline="middle" text-anchor="middle">||</text>
+  <text x="50%" y="80%" font-family="Noto Sans" font-size="4.2em" style="font-family:&quot;Noto Sans&quot;,sans-serif" fill="#4488FF" class="foreground-fill" dominant-baseline="middle" text-anchor="middle">WebSocket</text>
 </svg>
