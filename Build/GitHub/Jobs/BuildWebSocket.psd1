@@ -29,6 +29,6 @@
             uses = './'
             id = 'WebSocketAction'
         },#>
-        #'BuildAndPublishContainer'
+        'BuildAndPublishContainer'
     )
 }
