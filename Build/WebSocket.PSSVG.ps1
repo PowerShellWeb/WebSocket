@@ -92,8 +92,7 @@ foreach ($variant in '','Animated') {
         Style="font-family:`"$fontName`",sans-serif"
         Fill='#4488FF'
         Class='foreground-fill'
-        DominantBaseline='middle'
-        TextAnchor='middle'
+        DominantBaseline='middle'        
     }
 
     svg -Content @(
@@ -102,6 +101,6 @@ foreach ($variant in '','Animated') {
         SVG.Use -Href '#PowerShellWeb' -Height 60% -Width 60% -X 20% -Y 20%
         SVG.Text -X 42% -Y 50% @TextSplat -Content '||' 
         SVG.Text -X 54% -Y 50% @TextSplat -Content '||'
-        SVG.text -X 50% -Y 80% @TextSplat -Content 'WebSocket'
+        SVG.text -X 50% -Y 80% @TextSplat -Content 'WebSocket' -TextAnchor 'middle'
     ) -OutputPath $outputPath -ViewBox 0, 0, 1080, 1080
 }
