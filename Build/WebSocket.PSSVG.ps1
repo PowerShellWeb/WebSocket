@@ -99,8 +99,8 @@ foreach ($variant in '','Animated') {
         SVG.GoogleFont -FontName $fontName
         $symbolDefinition
         SVG.Use -Href '#PowerShellWeb' -Height 60% -Width 60% -X 20% -Y 20%
-        SVG.Text -X 43% -Y 50% @TextSplat -Content '||' 
-        SVG.Text -X 55% -Y 50% @TextSplat -Content '||'
+        SVG.Text -X 42% -Y 50% @TextSplat -Content '||' 
+        SVG.Text -X 54% -Y 50% @TextSplat -Content '||'
         SVG.text -X 50% -Y 80% @TextSplat -Content 'WebSocket'
     ) -OutputPath $outputPath -ViewBox 0, 0, 1080, 1080
 }
