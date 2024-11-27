@@ -30,10 +30,20 @@ websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.f
     Foreach-Object {
         $in = $_
         if ($in.commit.record.text -match '[\p{IsHighSurrogates}\p{IsLowSurrogates}]+') {
-            $matches.0 
+            Write-Host $matches.0 -NoNewline
         }
     }
 ```
+> EXAMPLE 4
+
+$emojiPattern = '[\p{IsHighSurrogates}\p{IsLowSurrogates}\p{IsVariationSelectors}\p{IsCombiningHalfMarks}]+)'
+websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |
+    Foreach-Object {
+        $in = $_
+        if ($in.commit.record.text -match "(?>(?:$emojiPattern|\#\w+)"") {
+            Write-Host $matches.0 -NoNewline
+        }
+    }
 
 ---
 
@@ -110,11 +120,11 @@ The Scriptblock to run when the WebSocket job produces a warning.
 |`[ScriptBlock]`|false   |named   |false        |
 
 #### **Watch**
-If set, will tail the output of the WebSocket job, outputting results continuously instead of outputting a websocket job.
+If set, will watch the output of the WebSocket job, outputting results continuously instead of outputting a websocket job.
 
-|Type      |Required|Position|PipelineInput|
-|----------|--------|--------|-------------|
-|`[Switch]`|false   |named   |false        |
+|Type      |Required|Position|PipelineInput|Aliases|
+|----------|--------|--------|-------------|-------|
+|`[Switch]`|false   |named   |false        |Tail   |
 
 #### **ConnectionTimeout**
 The maximum time to wait for a connection to be established.
