@@ -6,3 +6,6 @@
 * Initial Release of WebSocket module
   * Get-WebSocket gets content from a WebSocket
   * Docker container for WebSocket
+  * Build Workflow
+    * WebSocket Logo
+    * WebSocket website
