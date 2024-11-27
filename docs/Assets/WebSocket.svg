@@ -21,6 +21,6 @@
   </symbol>
   <use href="#PowerShellWeb" height="60%" width="60%" x="20%" y="20%" />
   <text x="42%" y="50%" font-family="Noto Sans" font-size="4.2em" style="font-family:&quot;Noto Sans&quot;,sans-serif" fill="#4488FF" class="foreground-fill" dominant-baseline="middle">||</text>
-  <text x="52%" y="50%" font-family="Noto Sans" font-size="4.2em" style="font-family:&quot;Noto Sans&quot;,sans-serif" fill="#4488FF" class="foreground-fill" dominant-baseline="middle">||</text>
+  <text x="56%" y="50%" font-family="Noto Sans" font-size="4.2em" style="font-family:&quot;Noto Sans&quot;,sans-serif" fill="#4488FF" class="foreground-fill" dominant-baseline="middle">||</text>
   <text x="50%" y="80%" text-anchor="middle" font-family="Noto Sans" style="font-family:&quot;Noto Sans&quot;,sans-serif" font-size="4.2em" fill="#4488FF" class="foreground-fill" dominant-baseline="middle">WebSocket</text>
 </svg>
