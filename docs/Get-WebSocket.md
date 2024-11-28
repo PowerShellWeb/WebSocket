@@ -149,6 +149,13 @@ The timeout for the WebSocket connection.  If this is provided, after the timeou
 |------------|--------|--------|-------------|
 |`[TimeSpan]`|false   |named   |false        |
 
+#### **Maximum**
+The maximum number of messages to receive before closing the WebSocket.
+
+|Type     |Required|Position|PipelineInput|
+|---------|--------|--------|-------------|
+|`[Int64]`|false   |named   |false        |
+
 #### **ConnectionTimeout**
 The maximum time to wait for a connection to be established.
 By default, this is 7 seconds.
@@ -177,5 +184,5 @@ RunspacePools allow you to limit the scope of the handler to a pool of runspaces
 
 ### Syntax
 ```PowerShell
-Get-WebSocket [[-WebSocketUri] <Uri>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-TimeOut <TimeSpan>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [<CommonParameters>]
+Get-WebSocket [[-WebSocketUri] <Uri>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-TimeOut <TimeSpan>] [-Maximum <Int64>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [<CommonParameters>]
 ```
