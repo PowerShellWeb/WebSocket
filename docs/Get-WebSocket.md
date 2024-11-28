@@ -41,11 +41,25 @@ $emojiPattern = '[\p{IsHighSurrogates}\p{IsLowSurrogates}\p{IsVariationSelectors
 websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |
     Foreach-Object {
         $in = $_
+        $spacing = (' ' * (Get-Random -Minimum 0 -Maximum 7))
         if ($in.commit.record.text -match "(?>(?:$emojiPattern|\#\w+)") {
-            Write-Host $matches.0 -NoNewline
+            $match = $matches.0                    
+            Write-Host $spacing,$match,$spacing -NoNewline
         }
     }
 ```
+> EXAMPLE 5
+
+```PowerShell
+websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch |
+    Where-Object {
+        $_.commit.record.embed.'$type' -eq 'app.bsky.embed.external'
+    } |
+    Foreach-Object {
+        $_.commit.record.embed.external.uri
+    }
+```
+> EXAMPLE 6
 
 ---
 
@@ -128,6 +142,13 @@ If set, will watch the output of the WebSocket job, outputting results continuou
 |----------|--------|--------|-------------|-------|
 |`[Switch]`|false   |named   |false        |Tail   |
 
+#### **TimeOut**
+The timeout for the WebSocket connection.  If this is provided, after the timeout elapsed, the WebSocket will be closed.
+
+|Type        |Required|Position|PipelineInput|
+|------------|--------|--------|-------------|
+|`[TimeSpan]`|false   |named   |false        |
+
 #### **ConnectionTimeout**
 The maximum time to wait for a connection to be established.
 By default, this is 7 seconds.
@@ -156,5 +177,5 @@ RunspacePools allow you to limit the scope of the handler to a pool of runspaces
 
 ### Syntax
 ```PowerShell
-Get-WebSocket [[-WebSocketUri] <Uri>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [<CommonParameters>]
+Get-WebSocket [[-WebSocketUri] <Uri>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-TimeOut <TimeSpan>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [<CommonParameters>]
 ```
