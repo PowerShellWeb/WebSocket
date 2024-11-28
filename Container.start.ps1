@@ -16,7 +16,7 @@
     # Run the initialization script.  This will do all remaining initialization in a single layer.
     RUN --mount=type=bind,src=./,target=/Initialize ./Initialize/Container.init.ps1
 
-    ENTRYPOINT ["pwsh", "-nologo", "-file", "/Container.start.ps1"]
+    ENTRYPOINT ["pwsh", "-nologo", "-noexit", "-file", "/Container.start.ps1"]
     ~~~
 .NOTES
     Did you know that in PowerShell you can 'use' namespaces that do not really exist?
@@ -58,8 +58,13 @@ if ($args) {
     }
     #region Custom
     else 
-    {
-        
+    {        
+        # If a single drive is mounted, start the socket files.
+        $webSocketFiles = $mountedFolders | Get-ChildItem -Filter *.WebSocket.ps1 
+        foreach ($webSocketFile in $webSocketFiles) {
+            Start-ThreadJob -Name $webSocketFile.Name -ScriptBlock {param($webSocketFile) . $using:webSocketFile.FullName } -ArgumentList $webSocketFile
+            . $webSocketFile.FullName
+        }
     }
     #endregion Custom
 }
