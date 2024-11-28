@@ -48,7 +48,17 @@
     {
       "Title": "EXAMPLE 4",
       "Markdown": "",
-      "Code": "$emojiPattern = '[\\p{IsHighSurrogates}\\p{IsLowSurrogates}\\p{IsVariationSelectors}\\p{IsCombiningHalfMarks}]+)'\nwebsocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |\n    Foreach-Object {\n        $in = $_\n        if ($in.commit.record.text -match \"(?>(?:$emojiPattern|\\#\\w+)\") {\n            Write-Host $matches.0 -NoNewline\n        }\n    }"
+      "Code": "$emojiPattern = '[\\p{IsHighSurrogates}\\p{IsLowSurrogates}\\p{IsVariationSelectors}\\p{IsCombiningHalfMarks}]+)'\nwebsocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |\n    Foreach-Object {\n        $in = $_\n        $spacing = (' ' * (Get-Random -Minimum 0 -Maximum 7))\n        if ($in.commit.record.text -match \"(?>(?:$emojiPattern|\\#\\w+)\") {\n            $match = $matches.0                    \n            Write-Host $spacing,$match,$spacing -NoNewline\n        }\n    }"
+    },
+    {
+      "Title": "EXAMPLE 5",
+      "Markdown": "",
+      "Code": "websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch |\n    Where-Object {\n        $_.commit.record.embed.'$type' -eq 'app.bsky.embed.external'\n    } |\n    Foreach-Object {\n        $_.commit.record.embed.external.uri\n    }"
+    },
+    {
+      "Title": "EXAMPLE 6",
+      "Markdown": "",
+      "Code": ""
     }
   ]
 }
