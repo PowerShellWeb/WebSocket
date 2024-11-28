@@ -23,10 +23,22 @@ function Get-WebSocket {
         websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |
             Foreach-Object {
                 $in = $_
+                $spacing = (' ' * (Get-Random -Minimum 0 -Maximum 7))
                 if ($in.commit.record.text -match "(?>(?:$emojiPattern|\#\w+)") {
-                    Write-Host $matches.0 -NoNewline
+                    $match = $matches.0                    
+                    Write-Host $spacing,$match,$spacing -NoNewline
                 }
             }
+    .EXAMPLE
+        websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch |
+            Where-Object {
+                $_.commit.record.embed.'$type' -eq 'app.bsky.embed.external'
+            } |
+            Foreach-Object {
+                $_.commit.record.embed.external.uri
+            }
+    .EXAMPLE
+                    
     #>
     [CmdletBinding(PositionalBinding=$false)]
     param(
@@ -77,6 +89,10 @@ function Get-WebSocket {
     [switch]
     $Watch,
 
+    # The timeout for the WebSocket connection.  If this is provided, after the timeout elapsed, the WebSocket will be closed.
+    [TimeSpan]
+    $TimeOut,    
+
     # The maximum time to wait for a connection to be established.
     # By default, this is 7 seconds.
     [TimeSpan]
@@ -123,11 +139,16 @@ function Get-WebSocket {
                 $ws = $WebSocket
             }
 
+            $webSocketStartTime = $Variable.WebSocketStartTime = [DateTime]::Now
             $Variable.WebSocket = $ws
                                     
             
             while ($true) {
                 if ($ws.State -ne 'Open') {break }
+                if ($TimeOut -and ([DateTime]::Now - $webSocketStartTime) -gt $TimeOut) {
+                    $ws.CloseAsync([Net.WebSockets.WebSocketCloseStatus]::NormalClosure, 'Timeout', $CT).Wait()
+                    break
+                }
                 $Buf = [byte[]]::new($BufferSize)
                 $Seg = [ArraySegment[byte]]::new($Buf)
                 $null = $ws.ReceiveAsync($Seg, $CT).Wait()
