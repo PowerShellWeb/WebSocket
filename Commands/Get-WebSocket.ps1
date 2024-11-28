@@ -91,7 +91,11 @@ function Get-WebSocket {
 
     # The timeout for the WebSocket connection.  If this is provided, after the timeout elapsed, the WebSocket will be closed.
     [TimeSpan]
-    $TimeOut,    
+    $TimeOut,
+
+    # The maximum number of messages to receive before closing the WebSocket.
+    [long]
+    $Maximum,
 
     # The maximum time to wait for a connection to be established.
     # By default, this is 7 seconds.
@@ -141,6 +145,8 @@ function Get-WebSocket {
 
             $webSocketStartTime = $Variable.WebSocketStartTime = [DateTime]::Now
             $Variable.WebSocket = $ws
+
+            $MessageCount = [long]0
                                     
             
             while ($true) {
@@ -149,9 +155,17 @@ function Get-WebSocket {
                     $ws.CloseAsync([Net.WebSockets.WebSocketCloseStatus]::NormalClosure, 'Timeout', $CT).Wait()
                     break
                 }
+
+                if ($Maximum -and $MessageCount -ge $Maximum) {
+                    $ws.CloseAsync([Net.WebSockets.WebSocketCloseStatus]::NormalClosure, 'Maximum messages reached', $CT).Wait()
+                    break
+                }
+                
+                
                 $Buf = [byte[]]::new($BufferSize)
                 $Seg = [ArraySegment[byte]]::new($Buf)
                 $null = $ws.ReceiveAsync($Seg, $CT).Wait()
+                $MessageCount++
                 $JS = $OutputEncoding.GetString($Buf, 0, $Buf.Count)
                 if ([string]::IsNullOrWhitespace($JS)) { continue }
                 try { 
