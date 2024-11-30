@@ -1,5 +1,5 @@
 <div align='center'>
-    <img alt='WebSocket Logo (Animated)' style='height:50%' src='Assets/WebSocket-Animated.svg' />
+    <img alt='WebSocket Logo (Animated)' style='width:33%' src='Assets/WebSocket-Animated.svg' />
 </div>
 
 # WebSocket
