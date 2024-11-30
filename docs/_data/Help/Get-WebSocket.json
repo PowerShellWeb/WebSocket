@@ -1,6 +1,6 @@
 {
   "Synopsis": "WebSockets in PowerShell.",
-  "Description": "Get-WebSocket allows you to connect to a websocket and handle the output.",
+  "Description": "Get-WebSocket gets a websocket.\n\nThis will create a job that connects to a WebSocket and outputs the results.\n\nIf the `-Watch` parameter is provided, will output a continous stream of objects from the websocket.",
   "Parameters": [
     {
       "Name": null,
@@ -33,32 +33,37 @@
     {
       "Title": "EXAMPLE 1",
       "Markdown": "Create a WebSocket job that connects to a WebSocket and outputs the results.",
-      "Code": "Get-WebSocket -WebSocketUri \"wss://localhost:9669\""
+      "Code": "Get-WebSocket -WebSocketUri \"wss://localhost:9669/\""
     },
     {
       "Title": "EXAMPLE 2",
-      "Markdown": "Get is the default verb, so we can just say WebSocket.",
-      "Code": "websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post"
+      "Markdown": "Get is the default verb, so we can just say WebSocket.\n`-Watch` will output a continous stream of objects from the websocket.\nFor example, let's Watch BlueSky, but just the text.        ",
+      "Code": "websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch |\n    % { \n        $_.commit.record.text\n    }"
     },
     {
       "Title": "EXAMPLE 3",
-      "Markdown": "",
-      "Code": "websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |\n    Foreach-Object {\n        $in = $_\n        if ($in.commit.record.text -match '[\\p{IsHighSurrogates}\\p{IsLowSurrogates}]+') {\n            Write-Host $matches.0 -NoNewline\n        }\n    }"
+      "Markdown": "Watch BlueSky, but just the text and spacing",
+      "Code": "$blueSkySocketUrl = \"wss://jetstream2.us-$(\n    'east','west'|Get-Random\n).bsky.network/subscribe?$(@(\n    \"wantedCollections=app.bsky.feed.post\"\n) -join '&')\"\nwebsocket $blueSkySocketUrl -Watch | \n    % { Write-Host \"$(' ' * (Get-Random -Max 10))$($_.commit.record.text)$($(' ' * (Get-Random -Max 10)))\"}"
     },
     {
       "Title": "EXAMPLE 4",
       "Markdown": "",
-      "Code": "$emojiPattern = '[\\p{IsHighSurrogates}\\p{IsLowSurrogates}\\p{IsVariationSelectors}\\p{IsCombiningHalfMarks}]+)'\nwebsocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |\n    Foreach-Object {\n        $in = $_\n        $spacing = (' ' * (Get-Random -Minimum 0 -Maximum 7))\n        if ($in.commit.record.text -match \"(?>(?:$emojiPattern|\\#\\w+)\") {\n            $match = $matches.0                    \n            Write-Host $spacing,$match,$spacing -NoNewline\n        }\n    }"
+      "Code": "websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post"
     },
     {
       "Title": "EXAMPLE 5",
-      "Markdown": "",
-      "Code": "websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch |\n    Where-Object {\n        $_.commit.record.embed.'$type' -eq 'app.bsky.embed.external'\n    } |\n    Foreach-Object {\n        $_.commit.record.embed.external.uri\n    }"
+      "Markdown": "Watch BlueSky, but just the emoji",
+      "Code": "websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |\n    Foreach-Object {\n        $in = $_\n        if ($in.commit.record.text -match '[\\p{IsHighSurrogates}\\p{IsLowSurrogates}]+') {\n            Write-Host $matches.0 -NoNewline\n        }\n    }"
     },
     {
       "Title": "EXAMPLE 6",
       "Markdown": "",
-      "Code": ""
+      "Code": "$emojiPattern = '[\\p{IsHighSurrogates}\\p{IsLowSurrogates}\\p{IsVariationSelectors}\\p{IsCombiningHalfMarks}]+)'\nwebsocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |\n    Foreach-Object {\n        $in = $_\n        $spacing = (' ' * (Get-Random -Minimum 0 -Maximum 7))\n        if ($in.commit.record.text -match \"(?>(?:$emojiPattern|\\#\\w+)\") {\n            $match = $matches.0                    \n            Write-Host $spacing,$match,$spacing -NoNewline\n        }\n    }"
+    },
+    {
+      "Title": "EXAMPLE 7",
+      "Markdown": "",
+      "Code": "websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch |\n    Where-Object {\n        $_.commit.record.embed.'$type' -eq 'app.bsky.embed.external'\n    } |\n    Foreach-Object {\n        $_.commit.record.embed.external.uri\n    }"
     }
   ]
 }
