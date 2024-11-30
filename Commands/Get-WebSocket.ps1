@@ -60,6 +60,7 @@ function Get-WebSocket {
             }
     #>
     [CmdletBinding(PositionalBinding=$false)]
+    [Alias('WebSocket')]
     param(
     # The Uri of the WebSocket to connect to.
     [Parameter(Position=0,ValueFromPipelineByPropertyName)]
