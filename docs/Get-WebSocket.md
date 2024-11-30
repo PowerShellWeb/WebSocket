@@ -8,7 +8,11 @@ WebSockets in PowerShell.
 
 ### Description
 
-Get-WebSocket allows you to connect to a websocket and handle the output.
+Get-WebSocket gets a websocket.
+
+This will create a job that connects to a WebSocket and outputs the results.
+
+If the `-Watch` parameter is provided, will output a continous stream of objects from the websocket.
 
 ---
 
@@ -16,14 +20,35 @@ Get-WebSocket allows you to connect to a websocket and handle the output.
 Create a WebSocket job that connects to a WebSocket and outputs the results.
 
 ```PowerShell
-Get-WebSocket -WebSocketUri "wss://localhost:9669"
+Get-WebSocket -WebSocketUri "wss://localhost:9669/"
 ```
 Get is the default verb, so we can just say WebSocket.
+`-Watch` will output a continous stream of objects from the websocket.
+For example, let's Watch BlueSky, but just the text.        
+
+```PowerShell
+websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch |
+    % { 
+        $_.commit.record.text
+    }
+```
+Watch BlueSky, but just the text and spacing
+
+```PowerShell
+$blueSkySocketUrl = "wss://jetstream2.us-$(
+    'east','west'|Get-Random
+).bsky.network/subscribe?$(@(
+    "wantedCollections=app.bsky.feed.post"
+) -join '&')"
+websocket $blueSkySocketUrl -Watch | 
+    % { Write-Host "$(' ' * (Get-Random -Max 10))$($_.commit.record.text)$($(' ' * (Get-Random -Max 10)))"}
+```
+> EXAMPLE 4
 
 ```PowerShell
 websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post
 ```
-> EXAMPLE 3
+Watch BlueSky, but just the emoji
 
 ```PowerShell
 websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |
@@ -34,11 +59,11 @@ websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.f
         }
     }
 ```
-> EXAMPLE 4
+> EXAMPLE 6
 
 ```PowerShell
 $emojiPattern = '[\p{IsHighSurrogates}\p{IsLowSurrogates}\p{IsVariationSelectors}\p{IsCombiningHalfMarks}]+)'
-websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |
+websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |
     Foreach-Object {
         $in = $_
         $spacing = (' ' * (Get-Random -Minimum 0 -Maximum 7))
@@ -48,7 +73,7 @@ websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.f
         }
     }
 ```
-> EXAMPLE 5
+> EXAMPLE 7
 
 ```PowerShell
 websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch |
@@ -59,7 +84,6 @@ websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.
         $_.commit.record.embed.external.uri
     }
 ```
-> EXAMPLE 6
 
 ---
 
