@@ -137,10 +137,15 @@ function Get-WebSocket {
     [switch]
     $Watch,
 
-    # If set, will output the raw text of the WebSocket job.
+    # If set, will output the raw text that comes out of the WebSocket.
     [Alias('Raw')]
     [switch]
     $RawText,
+
+    # If set, will output the raw bytes that come out of the WebSocket.
+    [Alias('RawByte','RawBytes','Bytes','Byte')]
+    [switch]
+    $Binary,
 
     # If set, will watch the output of a WebSocket job for one or more conditions.
     # The conditions are the keys of the dictionary, and can be a regex, a string, or a scriptblock.
