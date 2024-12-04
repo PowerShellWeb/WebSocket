@@ -113,4 +113,40 @@ websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.
         $_.commit.record.embed.external.uri
     }
 ~~~
+ #### Get-WebSocket Example 8
+
+~~~powershell
+# BlueSky, but just the hashtags
+websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{
+    {$webSocketoutput.commit.record.text -match "\#\w+"}={
+        $matches.0
+    }                
+}
+~~~
+ #### Get-WebSocket Example 9
+
+~~~powershell
+# BlueSky, but just the hashtags (as links)
+websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{
+    {$webSocketoutput.commit.record.text -match "\#\w+"}={
+        if ($psStyle.FormatHyperlink) {
+            $psStyle.FormatHyperlink($matches.0, "https://bsky.app/search?q=$([Web.HttpUtility]::UrlEncode($matches.0))")
+        } else {
+            $matches.0
+        }
+    }
+}
+~~~
+ #### Get-WebSocket Example 10
+
+~~~powershell
+websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{
+    {$args.commit.record.text -match "\#\w+"}={
+        $matches.0
+    }
+    {$args.commit.record.text -match '[\p{IsHighSurrogates}\p{IsLowSurrogates}]+'}={
+        $matches.0
+    }
+}
+~~~
 
