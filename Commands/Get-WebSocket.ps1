@@ -7,7 +7,7 @@ function Get-WebSocket {
 
         This will create a job that connects to a WebSocket and outputs the results.
 
-        If the `-Watch` parameter is provided, will output a continous stream of objects from the websocket.
+        If the `-Watch` parameter is provided, will output a continous stream of objects.
     .EXAMPLE
         # Create a WebSocket job that connects to a WebSocket and outputs the results.
         Get-WebSocket -WebSocketUri "wss://localhost:9669/" 
@@ -58,6 +58,33 @@ function Get-WebSocket {
             Foreach-Object {
                 $_.commit.record.embed.external.uri
             }
+    .EXAMPLE
+        # BlueSky, but just the hashtags
+        websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{
+            {$webSocketoutput.commit.record.text -match "\#\w+"}={
+                $matches.0
+            }                
+        }
+    .EXAMPLE
+        # BlueSky, but just the hashtags (as links)
+        websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{
+            {$webSocketoutput.commit.record.text -match "\#\w+"}={
+                if ($psStyle.FormatHyperlink) {
+                    $psStyle.FormatHyperlink($matches.0, "https://bsky.app/search?q=$([Web.HttpUtility]::UrlEncode($matches.0))")
+                } else {
+                    $matches.0
+                }
+            }
+        }
+    .EXAMPLE
+        websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{
+            {$args.commit.record.text -match "\#\w+"}={
+                $matches.0
+            }
+            {$args.commit.record.text -match '[\p{IsHighSurrogates}\p{IsLowSurrogates}]+'}={
+                $matches.0
+            }
+        }
     #>
     [CmdletBinding(PositionalBinding=$false)]
     [Alias('WebSocket')]
@@ -72,6 +99,7 @@ function Get-WebSocket {
     $Handler,
 
     # Any variables to declare in the WebSocket job.
+    # These variables will also be added to the job as properties.
     [Collections.IDictionary]
     $Variable = @{},
 
@@ -108,6 +136,28 @@ function Get-WebSocket {
     [Alias('Tail')]
     [switch]
     $Watch,
+
+    # If set, will watch the output of a WebSocket job for one or more conditions.
+    # The conditions are the keys of the dictionary, and can be a regex, a string, or a scriptblock.
+    # The values of the dictionary are what will happen when a match is found.
+    [ValidateScript({
+        $keys = $_.Keys
+        $values = $_.values
+        foreach ($key in $keys) {
+            if ($key -isnot [scriptblock]) {
+                throw "Keys '$key' must be a scriptblock"
+            }            
+        }
+        foreach ($value in $values) {
+            if ($value -isnot [scriptblock] -and $value -isnot [string]) {
+                throw "Value '$value' must be a string or scriptblock"
+            }
+        }
+        return $true
+    })]
+    [Alias('WhereFor','Wherefore')]
+    [Collections.IDictionary]
+    $WatchFor,
 
     # The timeout for the WebSocket connection.  If this is provided, after the timeout elapsed, the WebSocket will be closed.
     [TimeSpan]
@@ -167,8 +217,7 @@ function Get-WebSocket {
             $Variable.WebSocket = $ws
 
             $MessageCount = [long]0
-                                    
-            
+                                                
             while ($true) {
                 if ($ws.State -ne 'Open') {break }
                 if ($TimeOut -and ([DateTime]::Now - $webSocketStartTime) -gt $TimeOut) {
@@ -275,7 +324,35 @@ function Get-WebSocket {
                     7, 11, 13, 17, 19, 23 | Get-Random
                 ) 
             } while ($webSocketJob.State -in 'Running','NotStarted')
-        } else {
+        } 
+        elseif ($WatchFor) {
+            . {
+                do {                
+                    $webSocketJob | Receive-Job
+                    Start-Sleep -Milliseconds (
+                        7, 11, 13, 17, 19, 23 | Get-Random
+                    ) 
+                } while ($webSocketJob.State -in 'Running','NotStarted')
+            } | . {                
+                process {
+                    $webSocketOutput = $_
+                    foreach ($key in @($WatchFor.Keys)) {
+                        $result = 
+                            if ($key -is [ScriptBlock]) {
+                                . $key $webSocketOutput
+                            }
+
+                        if (-not $result) { continue }
+                        if ($WatchFor[$key] -is [ScriptBlock]) {
+                            $webSocketOutput | . $WatchFor[$key]
+                        } else {
+                            $WatchFor[$key]
+                        }                        
+                    }
+                }
+            }
+        }
+        else {
             $webSocketJob
         }        
     }
