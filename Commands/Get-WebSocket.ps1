@@ -248,7 +248,7 @@ function Get-WebSocket {
                 try {
                     $webSocketMessage =
                         if ($Binary) {
-                            $Buf
+                            $Buf -gt 0
                         } elseif ($RawText) {
                             $OutputEncoding.GetString($Buf, 0, $Buf.Count)
                         } else {
