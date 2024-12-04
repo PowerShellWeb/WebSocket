@@ -137,6 +137,11 @@ function Get-WebSocket {
     [switch]
     $Watch,
 
+    # If set, will output the raw text of the WebSocket job.
+    [Alias('Raw')]
+    [switch]
+    $RawText,
+
     # If set, will watch the output of a WebSocket job for one or more conditions.
     # The conditions are the keys of the dictionary, and can be a regex, a string, or a scriptblock.
     # The values of the dictionary are what will happen when a match is found.
@@ -230,15 +235,20 @@ function Get-WebSocket {
                     break
                 }
                 
-                
                 $Buf = [byte[]]::new($BufferSize)
                 $Seg = [ArraySegment[byte]]::new($Buf)
                 $null = $ws.ReceiveAsync($Seg, $CT).Wait()
                 $MessageCount++
-                $JS = $OutputEncoding.GetString($Buf, 0, $Buf.Count)
-                if ([string]::IsNullOrWhitespace($JS)) { continue }
-                try { 
-                    $webSocketMessage = ConvertFrom-Json $JS
+                
+                try {
+                    $webSocketMessage =
+                        if ($Raw) {
+                            $OutputEncoding.GetString($Buf, 0, $Buf.Count)
+                        } else {
+                            $JS = $OutputEncoding.GetString($Buf, 0, $Buf.Count)
+                            if ([string]::IsNullOrWhitespace($JS)) { continue }
+                            ConvertFrom-Json $JS
+                        }
                     if ($handler) {
                         $psCmd =  
                             if ($runspace.LanguageMode -eq 'NoLanguage' -or 
@@ -318,7 +328,7 @@ function Get-WebSocket {
         }
         $webSocketJob.pstypenames.insert(0, 'WebSocketJob')
         if ($Watch) {
-            do {                
+            do {
                 $webSocketJob | Receive-Job
                 Start-Sleep -Milliseconds (
                     7, 11, 13, 17, 19, 23 | Get-Random
