@@ -1,6 +1,6 @@
 {
   "Synopsis": "WebSockets in PowerShell.",
-  "Description": "Get-WebSocket gets a websocket.\n\nThis will create a job that connects to a WebSocket and outputs the results.\n\nIf the `-Watch` parameter is provided, will output a continous stream of objects from the websocket.",
+  "Description": "Get-WebSocket gets a websocket.\n\nThis will create a job that connects to a WebSocket and outputs the results.\n\nIf the `-Watch` parameter is provided, will output a continous stream of objects.",
   "Parameters": [
     {
       "Name": null,
@@ -64,6 +64,21 @@
       "Title": "EXAMPLE 7",
       "Markdown": "",
       "Code": "websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch |\n    Where-Object {\n        $_.commit.record.embed.'$type' -eq 'app.bsky.embed.external'\n    } |\n    Foreach-Object {\n        $_.commit.record.embed.external.uri\n    }"
+    },
+    {
+      "Title": "EXAMPLE 8",
+      "Markdown": "BlueSky, but just the hashtags",
+      "Code": "websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{\n    {$webSocketoutput.commit.record.text -match \"\\#\\w+\"}={\n        $matches.0\n    }                \n}"
+    },
+    {
+      "Title": "EXAMPLE 9",
+      "Markdown": "BlueSky, but just the hashtags (as links)",
+      "Code": "websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{\n    {$webSocketoutput.commit.record.text -match \"\\#\\w+\"}={\n        if ($psStyle.FormatHyperlink) {\n            $psStyle.FormatHyperlink($matches.0, \"https://bsky.app/search?q=$([Web.HttpUtility]::UrlEncode($matches.0))\")\n        } else {\n            $matches.0\n        }\n    }\n}"
+    },
+    {
+      "Title": "EXAMPLE 10",
+      "Markdown": "",
+      "Code": "websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{\n    {$args.commit.record.text -match \"\\#\\w+\"}={\n        $matches.0\n    }\n    {$args.commit.record.text -match '[\\p{IsHighSurrogates}\\p{IsLowSurrogates}]+'}={\n        $matches.0\n    }\n}"
     }
   ]
 }
