@@ -3,14 +3,35 @@ function Get-WebSocket {
     .SYNOPSIS
         WebSockets in PowerShell.
     .DESCRIPTION
-        Get-WebSocket allows you to connect to a websocket and handle the output.
+        Get-WebSocket gets a websocket.
+
+        This will create a job that connects to a WebSocket and outputs the results.
+
+        If the `-Watch` parameter is provided, will output a continous stream of objects.
     .EXAMPLE
         # Create a WebSocket job that connects to a WebSocket and outputs the results.
-        Get-WebSocket -WebSocketUri "wss://localhost:9669" 
+        Get-WebSocket -WebSocketUri "wss://localhost:9669/" 
     .EXAMPLE
         # Get is the default verb, so we can just say WebSocket.
+        # `-Watch` will output a continous stream of objects from the websocket.
+        # For example, let's Watch BlueSky, but just the text.        
+        websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch |
+            % { 
+                $_.commit.record.text
+            }            
+    .EXAMPLE
+        # Watch BlueSky, but just the text and spacing
+        $blueSkySocketUrl = "wss://jetstream2.us-$(
+            'east','west'|Get-Random
+        ).bsky.network/subscribe?$(@(
+            "wantedCollections=app.bsky.feed.post"
+        ) -join '&')"
+        websocket $blueSkySocketUrl -Watch | 
+            % { Write-Host "$(' ' * (Get-Random -Max 10))$($_.commit.record.text)$($(' ' * (Get-Random -Max 10)))"}
+    .EXAMPLE        
         websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post
     .EXAMPLE
+        # Watch BlueSky, but just the emoji
         websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |
             Foreach-Object {
                 $in = $_
@@ -20,15 +41,53 @@ function Get-WebSocket {
             }
     .EXAMPLE
         $emojiPattern = '[\p{IsHighSurrogates}\p{IsLowSurrogates}\p{IsVariationSelectors}\p{IsCombiningHalfMarks}]+)'
-        websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |
+        websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |
             Foreach-Object {
                 $in = $_
+                $spacing = (' ' * (Get-Random -Minimum 0 -Maximum 7))
                 if ($in.commit.record.text -match "(?>(?:$emojiPattern|\#\w+)") {
-                    Write-Host $matches.0 -NoNewline
+                    $match = $matches.0                    
+                    Write-Host $spacing,$match,$spacing -NoNewline
                 }
             }
+    .EXAMPLE
+        websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch |
+            Where-Object {
+                $_.commit.record.embed.'$type' -eq 'app.bsky.embed.external'
+            } |
+            Foreach-Object {
+                $_.commit.record.embed.external.uri
+            }
+    .EXAMPLE
+        # BlueSky, but just the hashtags
+        websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{
+            {$webSocketoutput.commit.record.text -match "\#\w+"}={
+                $matches.0
+            }                
+        }
+    .EXAMPLE
+        # BlueSky, but just the hashtags (as links)
+        websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{
+            {$webSocketoutput.commit.record.text -match "\#\w+"}={
+                if ($psStyle.FormatHyperlink) {
+                    $psStyle.FormatHyperlink($matches.0, "https://bsky.app/search?q=$([Web.HttpUtility]::UrlEncode($matches.0))")
+                } else {
+                    $matches.0
+                }
+            }
+        }
+    .EXAMPLE
+        websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{
+            {$args.commit.record.text -match "\#\w+"}={
+                $matches.0
+            }
+            {$args.commit.record.text -match '[\p{IsHighSurrogates}\p{IsLowSurrogates}]+'}={
+                $matches.0
+            }
+        }
     #>
     [CmdletBinding(PositionalBinding=$false)]
+    [Alias('WebSocket')]
     param(
     # The Uri of the WebSocket to connect to.
     [Parameter(Position=0,ValueFromPipelineByPropertyName)]
@@ -40,6 +99,7 @@ function Get-WebSocket {
     $Handler,
 
     # Any variables to declare in the WebSocket job.
+    # These variables will also be added to the job as properties.
     [Collections.IDictionary]
     $Variable = @{},
 
@@ -76,6 +136,46 @@ function Get-WebSocket {
     [Alias('Tail')]
     [switch]
     $Watch,
+
+    # If set, will output the raw text that comes out of the WebSocket.
+    [Alias('Raw')]
+    [switch]
+    $RawText,
+
+    # If set, will output the raw bytes that come out of the WebSocket.
+    [Alias('RawByte','RawBytes','Bytes','Byte')]
+    [switch]
+    $Binary,
+
+    # If set, will watch the output of a WebSocket job for one or more conditions.
+    # The conditions are the keys of the dictionary, and can be a regex, a string, or a scriptblock.
+    # The values of the dictionary are what will happen when a match is found.
+    [ValidateScript({
+        $keys = $_.Keys
+        $values = $_.values
+        foreach ($key in $keys) {
+            if ($key -isnot [scriptblock]) {
+                throw "Keys '$key' must be a scriptblock"
+            }            
+        }
+        foreach ($value in $values) {
+            if ($value -isnot [scriptblock] -and $value -isnot [string]) {
+                throw "Value '$value' must be a string or scriptblock"
+            }
+        }
+        return $true
+    })]
+    [Alias('WhereFor','Wherefore')]
+    [Collections.IDictionary]
+    $WatchFor,
+
+    # The timeout for the WebSocket connection.  If this is provided, after the timeout elapsed, the WebSocket will be closed.
+    [TimeSpan]
+    $TimeOut,
+
+    # The maximum number of messages to receive before closing the WebSocket.
+    [long]
+    $Maximum,
 
     # The maximum time to wait for a connection to be established.
     # By default, this is 7 seconds.
@@ -123,18 +223,39 @@ function Get-WebSocket {
                 $ws = $WebSocket
             }
 
+            $webSocketStartTime = $Variable.WebSocketStartTime = [DateTime]::Now
             $Variable.WebSocket = $ws
-                                    
-            
+
+            $MessageCount = [long]0
+                                                
             while ($true) {
                 if ($ws.State -ne 'Open') {break }
+                if ($TimeOut -and ([DateTime]::Now - $webSocketStartTime) -gt $TimeOut) {
+                    $ws.CloseAsync([Net.WebSockets.WebSocketCloseStatus]::NormalClosure, 'Timeout', $CT).Wait()
+                    break
+                }
+
+                if ($Maximum -and $MessageCount -ge $Maximum) {
+                    $ws.CloseAsync([Net.WebSockets.WebSocketCloseStatus]::NormalClosure, 'Maximum messages reached', $CT).Wait()
+                    break
+                }
+                
                 $Buf = [byte[]]::new($BufferSize)
                 $Seg = [ArraySegment[byte]]::new($Buf)
                 $null = $ws.ReceiveAsync($Seg, $CT).Wait()
-                $JS = $OutputEncoding.GetString($Buf, 0, $Buf.Count)
-                if ([string]::IsNullOrWhitespace($JS)) { continue }
-                try { 
-                    $webSocketMessage = ConvertFrom-Json $JS
+                $MessageCount++
+                
+                try {
+                    $webSocketMessage =
+                        if ($Binary) {
+                            $Buf -gt 0
+                        } elseif ($RawText) {
+                            $OutputEncoding.GetString($Buf, 0, $Buf.Count)
+                        } else {
+                            $JS = $OutputEncoding.GetString($Buf, 0, $Buf.Count)
+                            if ([string]::IsNullOrWhitespace($JS)) { continue }
+                            ConvertFrom-Json $JS
+                        }
                     if ($handler) {
                         $psCmd =  
                             if ($runspace.LanguageMode -eq 'NoLanguage' -or 
@@ -214,13 +335,41 @@ function Get-WebSocket {
         }
         $webSocketJob.pstypenames.insert(0, 'WebSocketJob')
         if ($Watch) {
-            do {                
+            do {
                 $webSocketJob | Receive-Job
                 Start-Sleep -Milliseconds (
                     7, 11, 13, 17, 19, 23 | Get-Random
                 ) 
             } while ($webSocketJob.State -in 'Running','NotStarted')
-        } else {
+        } 
+        elseif ($WatchFor) {
+            . {
+                do {                
+                    $webSocketJob | Receive-Job
+                    Start-Sleep -Milliseconds (
+                        7, 11, 13, 17, 19, 23 | Get-Random
+                    ) 
+                } while ($webSocketJob.State -in 'Running','NotStarted')
+            } | . {                
+                process {
+                    $webSocketOutput = $_
+                    foreach ($key in @($WatchFor.Keys)) {
+                        $result = 
+                            if ($key -is [ScriptBlock]) {
+                                . $key $webSocketOutput
+                            }
+
+                        if (-not $result) { continue }
+                        if ($WatchFor[$key] -is [ScriptBlock]) {
+                            $webSocketOutput | . $WatchFor[$key]
+                        } else {
+                            $WatchFor[$key]
+                        }                        
+                    }
+                }
+            }
+        }
+        else {
             $webSocketJob
         }        
     }
