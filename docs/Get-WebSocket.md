@@ -201,6 +201,13 @@ If set, will watch the output of the WebSocket job, outputting results continuou
 |----------|--------|--------|-------------|-------|
 |`[Switch]`|false   |named   |false        |Tail   |
 
+#### **RawText**
+If set, will output the raw text of the WebSocket job.
+
+|Type      |Required|Position|PipelineInput|Aliases|
+|----------|--------|--------|-------------|-------|
+|`[Switch]`|false   |named   |false        |Raw    |
+
 #### **WatchFor**
 If set, will watch the output of a WebSocket job for one or more conditions.
 The conditions are the keys of the dictionary, and can be a regex, a string, or a scriptblock.
@@ -252,5 +259,5 @@ RunspacePools allow you to limit the scope of the handler to a pool of runspaces
 
 ### Syntax
 ```PowerShell
-Get-WebSocket [[-WebSocketUri] <Uri>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-Maximum <Int64>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [<CommonParameters>]
+Get-WebSocket [[-WebSocketUri] <Uri>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-RawText] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-Maximum <Int64>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [<CommonParameters>]
 ```
