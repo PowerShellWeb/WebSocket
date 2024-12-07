@@ -231,6 +231,14 @@ The timeout for the WebSocket connection.  If this is provided, after the timeou
 |------------|--------|--------|-------------|
 |`[TimeSpan]`|false   |named   |false        |
 
+#### **PSTypeName**
+If provided, will decorate the objects outputted from a websocket job.
+This will only decorate objects converted from JSON.
+
+|Type        |Required|Position|PipelineInput|Aliases                                |
+|------------|--------|--------|-------------|---------------------------------------|
+|`[String[]]`|false   |named   |false        |PSTypeNames<br/>Decorate<br/>Decoration|
+
 #### **Maximum**
 The maximum number of messages to receive before closing the WebSocket.
 
@@ -266,5 +274,5 @@ RunspacePools allow you to limit the scope of the handler to a pool of runspaces
 
 ### Syntax
 ```PowerShell
-Get-WebSocket [[-WebSocketUri] <Uri>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-RawText] [-Binary] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-Maximum <Int64>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [<CommonParameters>]
+Get-WebSocket [[-WebSocketUri] <Uri>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-RawText] [-Binary] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-PSTypeName <String[]>] [-Maximum <Int64>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [<CommonParameters>]
 ```
