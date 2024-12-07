@@ -173,6 +173,12 @@ function Get-WebSocket {
     [TimeSpan]
     $TimeOut,
 
+    # If provided, will decorate the objects outputted from a websocket job.
+    # This will only decorate objects converted from JSON.
+    [Alias('PSTypeNames','Decorate','Decoration')]
+    [string[]]
+    $PSTypeName,
+
     # The maximum number of messages to receive before closing the WebSocket.
     [long]
     $Maximum,
@@ -256,6 +262,13 @@ function Get-WebSocket {
                             if ([string]::IsNullOrWhitespace($JS)) { continue }
                             ConvertFrom-Json $JS
                         }
+                    if ($PSTypeName) {
+                        $webSocketMessage.pstypenames.clear()
+                        [Array]::Reverse($PSTypeName)
+                        foreach ($psType in $psTypeName) {
+                            $webSocketMessage.pstypenames.add($psType)
+                        }
+                    }
                     if ($handler) {
                         $psCmd =  
                             if ($runspace.LanguageMode -eq 'NoLanguage' -or 
