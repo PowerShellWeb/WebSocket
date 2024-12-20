@@ -1,11 +1,13 @@
 @{
-    ModuleVersion = '0.1.1'
+    ModuleVersion = '0.1.2'
     RootModule = 'WebSocket.psm1'
     Guid = '75c70c8b-e5eb-4a60-982e-a19110a1185d'
     Author = 'James Brundage'
     CompanyName = 'StartAutomating'
     Copyright = '2024 StartAutomating'
     Description = 'Work with WebSockets in PowerShell'
+    FunctionsToExport = @('Get-WebSocket')
+    AliasesToExport = @('WebSocket')
     PrivateData = @{
         PSData = @{
             Tags = @('WebSocket', 'WebSockets', 'Networking', 'Web')
@@ -15,21 +17,14 @@
 > Like It? [Star It](https://github.com/PowerShellWeb/WebSocket)
 > Love It? [Support It](https://github.com/sponsors/StartAutomating)
 
-## WebSocket 0.1.1
+## WebSocket 0.1.2
 
-* WebSocket GitHub Action
-  * Run any `*.WebSocket.ps1` files in a repository (#24)
-* WebSocket container updates
-  * Container now runs mounted `*.WebSocket.ps1` files (#26)
-* Get-WebSocket improvements:
-  * New Parameters:
-    * -Maximum (#22)
-    * -TimeOut (#23)
-    * -WatchFor (#29)
-    * -RawText (#30)
-    * -Binary (#31)
-* WebSocket Testing (#25)
-* Adding FUNDING.yml (#14)
+* WebSocket now decorates (#34)
+  * Added a -PSTypeName(s) parameter to Get-WebSocket, so we can extend the output.
+* Reusing WebSockets (#35)
+  * If a WebSocketUri is already open, we will reuse it.
+* Explicitly exporting commands (#38)
+  * This should enable automatic import and enable Find-Command
 
 ---
 

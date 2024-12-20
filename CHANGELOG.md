@@ -1,6 +1,17 @@
 > Like It? [Star It](https://github.com/PowerShellWeb/WebSocket)
 > Love It? [Support It](https://github.com/sponsors/StartAutomating)
 
+## WebSocket 0.1.2
+
+* WebSocket now decorates (#34)
+  * Added a -PSTypeName(s) parameter to Get-WebSocket, so we can extend the output.
+* Reusing WebSockets (#35)
+  * If a WebSocketUri is already open, we will reuse it.
+* Explicitly exporting commands (#38)
+  * This should enable automatic import and enable Find-Command
+
+---
+
 ## WebSocket 0.1.1
 
 * WebSocket GitHub Action
