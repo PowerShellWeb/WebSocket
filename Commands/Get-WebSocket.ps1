@@ -84,7 +84,25 @@ function Get-WebSocket {
             {$args.commit.record.text -match '[\p{IsHighSurrogates}\p{IsLowSurrogates}]+'}={
                 $matches.0
             }
-        }    
+        }
+    .EXAMPLE
+        # We can decorate a type returned from a WebSocket, allowing us to add additional properties.
+
+        # For example, let's add a `Tags` property to the `app.bsky.feed.post` type.
+        $typeName = 'app.bsky.feed.post'
+        Update-TypeData -TypeName $typeName -MemberName 'Tags' -MemberType ScriptProperty -Value {
+            @($this.commit.record.facets.features.tag)
+        } -Force
+        
+        # Now, let's get 10kb posts ( this should not take too long )
+        $somePosts =
+            websocket "wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=$typeName" -PSTypeName $typeName -Maximum 10kb -Watch
+        $somePosts |
+            ? Tags |
+            Select -ExpandProperty Tags |
+            Group |
+            Sort Count -Descending |
+            Select -First 10
     #>
     [CmdletBinding(PositionalBinding=$false)]
     [Alias('WebSocket')]
