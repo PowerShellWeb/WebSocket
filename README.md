@@ -149,4 +149,9 @@ websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.
     }
 }
 ~~~
+ #### Get-WebSocket Example 11
+
+~~~powershell
+# We can decorate a type returned from a WebSocket, allowing us to add additional properties.
+~~~
 
