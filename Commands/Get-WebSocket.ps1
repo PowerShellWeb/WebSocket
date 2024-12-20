@@ -84,7 +84,7 @@ function Get-WebSocket {
             {$args.commit.record.text -match '[\p{IsHighSurrogates}\p{IsLowSurrogates}]+'}={
                 $matches.0
             }
-        }
+        }    
     #>
     [CmdletBinding(PositionalBinding=$false)]
     [Alias('WebSocket')]
@@ -214,7 +214,7 @@ function Get-WebSocket {
 
             if (-not $WebSocketUri.Scheme) {
                 $WebSocketUri = [uri]"wss://$WebSocketUri"
-            }
+            }            
 
             if (-not $BufferSize) {
                 $BufferSize = 16kb
@@ -306,8 +306,22 @@ function Get-WebSocket {
                 if (-not $name) {
                     $Name = $WebSocketUri
                 }
-                
-                Start-ThreadJob -ScriptBlock $SocketJob -Name $Name -InitializationScript $InitializationScript -ArgumentList $Variable
+
+                $existingJob = foreach ($jobWithThisName in (Get-Job -Name $Name)) {
+                    if (
+                        $jobWithThisName.State -in 'Running','NotStarted' -and
+                        $jobWithThisName.WebSocket -is [Net.WebSockets.ClientWebSocket]
+                    ) {
+                        $jobWithThisName
+                        break
+                    }
+                }
+
+                if ($existingJob) {
+                    $existingJob
+                } else {
+                    Start-ThreadJob -ScriptBlock $SocketJob -Name $Name -InitializationScript $InitializationScript -ArgumentList $Variable
+                }                                            
             } elseif ($WebSocket) {
                 if (-not $name) {
                     $name = "websocket"
