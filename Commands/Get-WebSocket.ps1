@@ -85,6 +85,24 @@ function Get-WebSocket {
                 $matches.0
             }
         }
+    .EXAMPLE
+        # We can decorate a type returned from a WebSocket, allowing us to add additional properties.
+
+        # For example, let's add a `Tags` property to the `app.bsky.feed.post` type.
+        $typeName = 'app.bsky.feed.post'
+        Update-TypeData -TypeName $typeName -MemberName 'Tags' -MemberType ScriptProperty -Value {
+            @($this.commit.record.facets.features.tag)
+        } -Force
+        
+        # Now, let's get 10kb posts ( this should not take too long )
+        $somePosts =
+            websocket "wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=$typeName" -PSTypeName $typeName -Maximum 10kb -Watch
+        $somePosts |
+            ? Tags |
+            Select -ExpandProperty Tags |
+            Group |
+            Sort Count -Descending |
+            Select -First 10
     #>
     [CmdletBinding(PositionalBinding=$false)]
     [Alias('WebSocket')]
@@ -173,6 +191,12 @@ function Get-WebSocket {
     [TimeSpan]
     $TimeOut,
 
+    # If provided, will decorate the objects outputted from a websocket job.
+    # This will only decorate objects converted from JSON.
+    [Alias('PSTypeNames','Decorate','Decoration')]
+    [string[]]
+    $PSTypeName,
+
     # The maximum number of messages to receive before closing the WebSocket.
     [long]
     $Maximum,
@@ -208,7 +232,7 @@ function Get-WebSocket {
 
             if (-not $WebSocketUri.Scheme) {
                 $WebSocketUri = [uri]"wss://$WebSocketUri"
-            }
+            }            
 
             if (-not $BufferSize) {
                 $BufferSize = 16kb
@@ -256,6 +280,13 @@ function Get-WebSocket {
                             if ([string]::IsNullOrWhitespace($JS)) { continue }
                             ConvertFrom-Json $JS
                         }
+                    if ($PSTypeName) {
+                        $webSocketMessage.pstypenames.clear()
+                        [Array]::Reverse($PSTypeName)
+                        foreach ($psType in $psTypeName) {
+                            $webSocketMessage.pstypenames.add($psType)
+                        }
+                    }
                     if ($handler) {
                         $psCmd =  
                             if ($runspace.LanguageMode -eq 'NoLanguage' -or 
@@ -293,8 +324,22 @@ function Get-WebSocket {
                 if (-not $name) {
                     $Name = $WebSocketUri
                 }
-                
-                Start-ThreadJob -ScriptBlock $SocketJob -Name $Name -InitializationScript $InitializationScript -ArgumentList $Variable
+
+                $existingJob = foreach ($jobWithThisName in (Get-Job -Name $Name)) {
+                    if (
+                        $jobWithThisName.State -in 'Running','NotStarted' -and
+                        $jobWithThisName.WebSocket -is [Net.WebSockets.ClientWebSocket]
+                    ) {
+                        $jobWithThisName
+                        break
+                    }
+                }
+
+                if ($existingJob) {
+                    $existingJob
+                } else {
+                    Start-ThreadJob -ScriptBlock $SocketJob -Name $Name -InitializationScript $InitializationScript -ArgumentList $Variable
+                }                                            
             } elseif ($WebSocket) {
                 if (-not $name) {
                     $name = "websocket"

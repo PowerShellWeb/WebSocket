@@ -79,6 +79,11 @@
       "Title": "EXAMPLE 10",
       "Markdown": "",
       "Code": "websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{\n    {$args.commit.record.text -match \"\\#\\w+\"}={\n        $matches.0\n    }\n    {$args.commit.record.text -match '[\\p{IsHighSurrogates}\\p{IsLowSurrogates}]+'}={\n        $matches.0\n    }\n}"
+    },
+    {
+      "Title": "EXAMPLE 11",
+      "Markdown": "We can decorate a type returned from a WebSocket, allowing us to add additional properties.\nFor example, let's add a `Tags` property to the `app.bsky.feed.post` type.",
+      "Code": "$typeName = 'app.bsky.feed.post'\nUpdate-TypeData -TypeName $typeName -MemberName 'Tags' -MemberType ScriptProperty -Value {\n    @($this.commit.record.facets.features.tag)\n} -Force\n\n# Now, let's get 10kb posts ( this should not take too long )\n$somePosts =\n    websocket \"wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=$typeName\" -PSTypeName $typeName -Maximum 10kb -Watch\n$somePosts |\n    ? Tags |\n    Select -ExpandProperty Tags |\n    Group |\n    Sort Count -Descending |\n    Select -First 10"
     }
   ]
 }

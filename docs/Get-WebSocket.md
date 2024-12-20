@@ -118,6 +118,25 @@ websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.
     }
 }
 ```
+We can decorate a type returned from a WebSocket, allowing us to add additional properties.
+For example, let's add a `Tags` property to the `app.bsky.feed.post` type.
+
+```PowerShell
+$typeName = 'app.bsky.feed.post'
+Update-TypeData -TypeName $typeName -MemberName 'Tags' -MemberType ScriptProperty -Value {
+    @($this.commit.record.facets.features.tag)
+} -Force
+
+# Now, let's get 10kb posts ( this should not take too long )
+$somePosts =
+    websocket "wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=$typeName" -PSTypeName $typeName -Maximum 10kb -Watch
+$somePosts |
+    ? Tags |
+    Select -ExpandProperty Tags |
+    Group |
+    Sort Count -Descending |
+    Select -First 10
+```
 
 ---
 
@@ -231,6 +250,14 @@ The timeout for the WebSocket connection.  If this is provided, after the timeou
 |------------|--------|--------|-------------|
 |`[TimeSpan]`|false   |named   |false        |
 
+#### **PSTypeName**
+If provided, will decorate the objects outputted from a websocket job.
+This will only decorate objects converted from JSON.
+
+|Type        |Required|Position|PipelineInput|Aliases                                |
+|------------|--------|--------|-------------|---------------------------------------|
+|`[String[]]`|false   |named   |false        |PSTypeNames<br/>Decorate<br/>Decoration|
+
 #### **Maximum**
 The maximum number of messages to receive before closing the WebSocket.
 
@@ -266,5 +293,5 @@ RunspacePools allow you to limit the scope of the handler to a pool of runspaces
 
 ### Syntax
 ```PowerShell
-Get-WebSocket [[-WebSocketUri] <Uri>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-RawText] [-Binary] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-Maximum <Int64>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [<CommonParameters>]
+Get-WebSocket [[-WebSocketUri] <Uri>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-RawText] [-Binary] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-PSTypeName <String[]>] [-Maximum <Int64>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [<CommonParameters>]
 ```
