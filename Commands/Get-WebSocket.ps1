@@ -325,7 +325,7 @@ function Get-WebSocket {
                     $Name = $WebSocketUri
                 }
 
-                $existingJob = foreach ($jobWithThisName in (Get-Job -Name $Name)) {
+                $existingJob = foreach ($jobWithThisName in (Get-Job -Name $Name -ErrorAction Ignore)) {
                     if (
                         $jobWithThisName.State -in 'Running','NotStarted' -and
                         $jobWithThisName.WebSocket -is [Net.WebSockets.ClientWebSocket]
