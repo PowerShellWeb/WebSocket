@@ -165,6 +165,10 @@ function Get-WebSocket {
     [switch]
     $Binary,
 
+    # The subprotocol used by the websocket.  If not provided, this will default to `json`.
+    [string]
+    $SubProtocol,
+
     # If set, will watch the output of a WebSocket job for one or more conditions.
     # The conditions are the keys of the dictionary, and can be a regex, a string, or a scriptblock.
     # The values of the dictionary are what will happen when a match is found.
@@ -242,6 +246,11 @@ function Get-WebSocket {
             
             if (-not $webSocket) {
                 $ws = [Net.WebSockets.ClientWebSocket]::new()
+                if ($SubProtocol) {
+                    $ws.Options.AddSubProtocol($SubProtocol)
+                } else {
+                    $ws.Options.AddSubProtocol('json')
+                }
                 $null = $ws.ConnectAsync($WebSocketUri, $CT).Wait()
             } else {
                 $ws = $WebSocket
