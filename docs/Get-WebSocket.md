@@ -48,6 +48,11 @@ websocket $blueSkySocketUrl -Watch |
 ```PowerShell
 websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post
 ```
+> EXAMPLE 5
+
+```PowerShell
+websocket wss://jetstream2.us-west.bsky.network/subscribe -QueryParameter @{ wantedCollections = 'app.bsky.feed.post' } -Max 1 -Debug
+```
 Watch BlueSky, but just the emoji
 
 ```PowerShell
@@ -59,7 +64,7 @@ websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.f
         }
     }
 ```
-> EXAMPLE 6
+> EXAMPLE 7
 
 ```PowerShell
 $emojiPattern = '[\p{IsHighSurrogates}\p{IsLowSurrogates}\p{IsVariationSelectors}\p{IsCombiningHalfMarks}]+)'
@@ -73,7 +78,7 @@ websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.
         }
     }
 ```
-> EXAMPLE 7
+> EXAMPLE 8
 
 ```PowerShell
 websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch |
@@ -106,7 +111,7 @@ websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.
     }
 }
 ```
-> EXAMPLE 10
+> EXAMPLE 11
 
 ```PowerShell
 websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{
@@ -147,6 +152,14 @@ The Uri of the WebSocket to connect to.
 |Type   |Required|Position|PipelineInput        |Aliases    |
 |-------|--------|--------|---------------------|-----------|
 |`[Uri]`|false   |1       |true (ByPropertyName)|Url<br/>Uri|
+
+#### **QueryParameter**
+A collection of query parameters.
+These will be appended onto the `-WebSocketUri`.
+
+|Type           |Required|Position|PipelineInput|
+|---------------|--------|--------|-------------|
+|`[IDictionary]`|false   |named   |false        |
 
 #### **Handler**
 A ScriptBlock that will handle the output of the WebSocket.
@@ -300,5 +313,5 @@ RunspacePools allow you to limit the scope of the handler to a pool of runspaces
 
 ### Syntax
 ```PowerShell
-Get-WebSocket [[-WebSocketUri] <Uri>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-RawText] [-Binary] [-SubProtocol <String>] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-PSTypeName <String[]>] [-Maximum <Int64>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [<CommonParameters>]
+Get-WebSocket [[-WebSocketUri] <Uri>] [-QueryParameter <IDictionary>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-RawText] [-Binary] [-SubProtocol <String>] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-PSTypeName <String[]>] [-Maximum <Int64>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [<CommonParameters>]
 ```
