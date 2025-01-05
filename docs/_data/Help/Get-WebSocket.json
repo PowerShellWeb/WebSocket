@@ -52,36 +52,41 @@
     },
     {
       "Title": "EXAMPLE 5",
+      "Markdown": "",
+      "Code": "websocket wss://jetstream2.us-west.bsky.network/subscribe -QueryParameter @{ wantedCollections = 'app.bsky.feed.post' } -Max 1 -Debug"
+    },
+    {
+      "Title": "EXAMPLE 6",
       "Markdown": "Watch BlueSky, but just the emoji",
       "Code": "websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |\n    Foreach-Object {\n        $in = $_\n        if ($in.commit.record.text -match '[\\p{IsHighSurrogates}\\p{IsLowSurrogates}]+') {\n            Write-Host $matches.0 -NoNewline\n        }\n    }"
     },
     {
-      "Title": "EXAMPLE 6",
+      "Title": "EXAMPLE 7",
       "Markdown": "",
       "Code": "$emojiPattern = '[\\p{IsHighSurrogates}\\p{IsLowSurrogates}\\p{IsVariationSelectors}\\p{IsCombiningHalfMarks}]+)'\nwebsocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |\n    Foreach-Object {\n        $in = $_\n        $spacing = (' ' * (Get-Random -Minimum 0 -Maximum 7))\n        if ($in.commit.record.text -match \"(?>(?:$emojiPattern|\\#\\w+)\") {\n            $match = $matches.0                    \n            Write-Host $spacing,$match,$spacing -NoNewline\n        }\n    }"
     },
     {
-      "Title": "EXAMPLE 7",
+      "Title": "EXAMPLE 8",
       "Markdown": "",
       "Code": "websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch |\n    Where-Object {\n        $_.commit.record.embed.'$type' -eq 'app.bsky.embed.external'\n    } |\n    Foreach-Object {\n        $_.commit.record.embed.external.uri\n    }"
     },
     {
-      "Title": "EXAMPLE 8",
+      "Title": "EXAMPLE 9",
       "Markdown": "BlueSky, but just the hashtags",
       "Code": "websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{\n    {$webSocketoutput.commit.record.text -match \"\\#\\w+\"}={\n        $matches.0\n    }                \n}"
     },
     {
-      "Title": "EXAMPLE 9",
+      "Title": "EXAMPLE 10",
       "Markdown": "BlueSky, but just the hashtags (as links)",
       "Code": "websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{\n    {$webSocketoutput.commit.record.text -match \"\\#\\w+\"}={\n        if ($psStyle.FormatHyperlink) {\n            $psStyle.FormatHyperlink($matches.0, \"https://bsky.app/search?q=$([Web.HttpUtility]::UrlEncode($matches.0))\")\n        } else {\n            $matches.0\n        }\n    }\n}"
     },
     {
-      "Title": "EXAMPLE 10",
+      "Title": "EXAMPLE 11",
       "Markdown": "",
       "Code": "websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{\n    {$args.commit.record.text -match \"\\#\\w+\"}={\n        $matches.0\n    }\n    {$args.commit.record.text -match '[\\p{IsHighSurrogates}\\p{IsLowSurrogates}]+'}={\n        $matches.0\n    }\n}"
     },
     {
-      "Title": "EXAMPLE 11",
+      "Title": "EXAMPLE 12",
       "Markdown": "We can decorate a type returned from a WebSocket, allowing us to add additional properties.\nFor example, let's add a `Tags` property to the `app.bsky.feed.post` type.",
       "Code": "$typeName = 'app.bsky.feed.post'\nUpdate-TypeData -TypeName $typeName -MemberName 'Tags' -MemberType ScriptProperty -Value {\n    @($this.commit.record.facets.features.tag)\n} -Force\n\n# Now, let's get 10kb posts ( this should not take too long )\n$somePosts =\n    websocket \"wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=$typeName\" -PSTypeName $typeName -Maximum 10kb -Watch\n$somePosts |\n    ? Tags |\n    Select -ExpandProperty Tags |\n    Group |\n    Sort Count -Descending |\n    Select -First 10"
     }
