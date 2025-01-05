@@ -131,7 +131,7 @@ function Get-WebSocket {
 
     # The buffer size.  Defaults to 16kb.
     [int]
-    $BufferSize = 16kb,
+    $BufferSize = 64kb,
 
     # The ScriptBlock to run after connection to a websocket.
     # This can be useful for making any initial requests.
@@ -244,7 +244,7 @@ function Get-WebSocket {
             }            
 
             if (-not $BufferSize) {
-                $BufferSize = 16kb
+                $BufferSize = 64kb
             }
 
             $CT = [Threading.CancellationToken]::None
