@@ -31,6 +31,8 @@ function Get-WebSocket {
     .EXAMPLE        
         websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post
     .EXAMPLE
+        websocket wss://jetstream2.us-west.bsky.network/subscribe -QueryParameter @{ wantedCollections = 'app.bsky.feed.post' } -Max 1 -Debug
+    .EXAMPLE
         # Watch BlueSky, but just the emoji
         websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |
             Foreach-Object {
@@ -111,6 +113,11 @@ function Get-WebSocket {
     [Parameter(Position=0,ValueFromPipelineByPropertyName)]
     [Alias('Url','Uri')]
     [uri]$WebSocketUri,
+
+    # A collection of query parameters.
+    # These will be appended onto the `-WebSocketUri`.
+    [Collections.IDictionary]
+    $QueryParameter,
 
     # A ScriptBlock that will handle the output of the WebSocket.
     [ScriptBlock]
@@ -227,6 +234,7 @@ function Get-WebSocket {
             param(
                 # By accepting a single parameter containing variables, 
                 # we can avoid the need to pass in a large number of parameters.
+                # we can also modify this dictionary, to provide a way to pass information back.
                 [Collections.IDictionary]$Variable
             )
             
@@ -241,7 +249,20 @@ function Get-WebSocket {
 
             if (-not $WebSocketUri.Scheme) {
                 $WebSocketUri = [uri]"wss://$WebSocketUri"
-            }            
+            }
+            
+            if ($QueryParameter) {
+                $WebSocketUri = [uri]"$($webSocketUri)$($WebSocketUri.Query ? '&' : '?')$(@(
+                    foreach ($keyValuePair in $QueryParameter.GetEnumerator()) {
+                        if ($keyValuePair.Value -is [Collections.IList]) {
+                            foreach ($value in $keyValuePair.Value) {
+                                "$($keyValuePair.Key)=$([Web.HttpUtility]::UrlEncode($value).Replace('+', '%20'))"
+                            }
+                        } else {
+                            "$($keyValuePair.Key)=$([Web.HttpUtility]::UrlEncode($keyValuePair.Value).Replace('+', '%20'))"
+                        }
+                }) -join '&')"
+            }
 
             if (-not $BufferSize) {
                 $BufferSize = 64kb
