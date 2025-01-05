@@ -79,6 +79,11 @@ websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.
  #### Get-WebSocket Example 5
 
 ~~~powershell
+websocket wss://jetstream2.us-west.bsky.network/subscribe -QueryParameter @{ wantedCollections = 'app.bsky.feed.post' } -Max 1 -Debug
+~~~
+ #### Get-WebSocket Example 6
+
+~~~powershell
 # Watch BlueSky, but just the emoji
 websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |
     Foreach-Object {
@@ -88,7 +93,7 @@ websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.f
         }
     }
 ~~~
- #### Get-WebSocket Example 6
+ #### Get-WebSocket Example 7
 
 ~~~powershell
 $emojiPattern = '[\p{IsHighSurrogates}\p{IsLowSurrogates}\p{IsVariationSelectors}\p{IsCombiningHalfMarks}]+)'
@@ -102,7 +107,7 @@ websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.
         }
     }
 ~~~
- #### Get-WebSocket Example 7
+ #### Get-WebSocket Example 8
 
 ~~~powershell
 websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch |
@@ -113,7 +118,7 @@ websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.
         $_.commit.record.embed.external.uri
     }
 ~~~
- #### Get-WebSocket Example 8
+ #### Get-WebSocket Example 9
 
 ~~~powershell
 # BlueSky, but just the hashtags
@@ -123,7 +128,7 @@ websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.
     }                
 }
 ~~~
- #### Get-WebSocket Example 9
+ #### Get-WebSocket Example 10
 
 ~~~powershell
 # BlueSky, but just the hashtags (as links)
@@ -137,7 +142,7 @@ websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.
     }
 }
 ~~~
- #### Get-WebSocket Example 10
+ #### Get-WebSocket Example 11
 
 ~~~powershell
 websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{
@@ -149,7 +154,7 @@ websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.
     }
 }
 ~~~
- #### Get-WebSocket Example 11
+ #### Get-WebSocket Example 12
 
 ~~~powershell
 # We can decorate a type returned from a WebSocket, allowing us to add additional properties.
