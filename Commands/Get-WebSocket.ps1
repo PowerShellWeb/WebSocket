@@ -178,7 +178,7 @@ function Get-WebSocket {
         foreach ($key in $keys) {
             if ($key -isnot [scriptblock]) {
                 throw "Keys '$key' must be a scriptblock"
-            }            
+            }
         }
         foreach ($value in $values) {
             if ($value -isnot [scriptblock] -and $value -isnot [string]) {
@@ -224,13 +224,18 @@ function Get-WebSocket {
 
     begin {
         $SocketJob = {
-            param([Collections.IDictionary]$Variable)
+            param(
+                # By accepting a single parameter containing variables, 
+                # we can avoid the need to pass in a large number of parameters.
+                [Collections.IDictionary]$Variable
+            )
             
+            # Take every every `-Variable` passed in and define it within the job
             foreach ($keyValue in $variable.GetEnumerator()) {
                 $ExecutionContext.SessionState.PSVariable.Set($keyValue.Key, $keyValue.Value)
             }
 
-            if ((-not $WebSocketUri) -or $webSocket) {
+            if ((-not $WebSocketUri)) {
                 throw "No WebSocketUri"
             }
 
@@ -244,7 +249,7 @@ function Get-WebSocket {
 
             $CT = [Threading.CancellationToken]::None
             
-            if (-not $webSocket) {
+            if ($webSocket -isnot [Net.WebSockets.ClientWebSocket]) {
                 $ws = [Net.WebSockets.ClientWebSocket]::new()
                 if ($SubProtocol) {
                     $ws.Options.AddSubProtocol($SubProtocol)
@@ -328,6 +333,10 @@ function Get-WebSocket {
         foreach ($keyValuePair in $PSBoundParameters.GetEnumerator()) {
             $Variable[$keyValuePair.Key] = $keyValuePair.Value
         }
+        if ($DebugPreference -notin 'SilentlyContinue','Ignore') {
+            . $SocketJob -Variable $Variable
+            return
+        }
         $webSocketJob = 
             if ($WebSocketUri) {
                 if (-not $name) {
@@ -362,32 +371,37 @@ function Get-WebSocket {
             SupportEvent = $true
         }
         $eventSubscriptions = @(
-            if ($OnOutput) {
-                Register-ObjectEvent @subscriptionSplat -InputObject $webSocketJob.Output -Action $OnOutput
-            }
-            if ($OnError) {
-                Register-ObjectEvent @subscriptionSplat -InputObject $webSocketJob.Error -Action $OnError
-            }
-            if ($OnWarning) {
-                Register-ObjectEvent @subscriptionSplat -InputObject $webSocketJob.Warning -Action $OnWarning
-            }
+            if ($webSocketJob) {
+                if ($OnOutput) {
+                    Register-ObjectEvent @subscriptionSplat -InputObject $webSocketJob.Output -Action $OnOutput
+                }
+                if ($OnError) {
+                    Register-ObjectEvent @subscriptionSplat -InputObject $webSocketJob.Error -Action $OnError
+                }
+                if ($OnWarning) {
+                    Register-ObjectEvent @subscriptionSplat -InputObject $webSocketJob.Warning -Action $OnWarning
+                }
+            }            
         )
         if ($eventSubscriptions) {
             $variable['EventSubscriptions'] = $eventSubscriptions
         }
 
-        $webSocketConnectTimeout = [DateTime]::Now + $ConnectionTimeout
-        while (-not $variable['WebSocket'] -and 
-            ([DateTime]::Now -lt $webSocketConnectTimeout)) {
-            Start-Sleep -Milliseconds 0
-        }
+        if ($webSocketJob) {
+            $webSocketConnectTimeout = [DateTime]::Now + $ConnectionTimeout
+            while (-not $variable['WebSocket'] -and 
+                ([DateTime]::Now -lt $webSocketConnectTimeout)) {
+                Start-Sleep -Milliseconds 0
+            }
+            
+            foreach ($keyValuePair in $Variable.GetEnumerator()) {
+                $webSocketJob.psobject.properties.add(
+                    [psnoteproperty]::new($keyValuePair.Key, $keyValuePair.Value), $true
+                )
+            }
+            $webSocketJob.pstypenames.insert(0, 'WebSocketJob')
+        }        
         
-        foreach ($keyValuePair in $Variable.GetEnumerator()) {
-            $webSocketJob.psobject.properties.add(
-                [psnoteproperty]::new($keyValuePair.Key, $keyValuePair.Value), $true
-            )
-        }
-        $webSocketJob.pstypenames.insert(0, 'WebSocketJob')
         if ($Watch) {
             do {
                 $webSocketJob | Receive-Job
