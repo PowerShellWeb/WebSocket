@@ -165,7 +165,7 @@ function Get-WebSocket {
     # If set, will output the raw text that comes out of the WebSocket.
     [Alias('Raw')]
     [switch]
-    $RawText,
+    $RawText,    
 
     # If set, will output the raw bytes that come out of the WebSocket.
     [Alias('RawByte','RawBytes','Bytes','Byte')]
@@ -175,6 +175,14 @@ function Get-WebSocket {
     # The subprotocol used by the websocket.  If not provided, this will default to `json`.
     [string]
     $SubProtocol,
+    
+    # One or more filters to apply to the output of the WebSocket.
+    # These can be strings, regexes, scriptblocks, or commands.
+    # If they are strings or regexes, they will be applied to the raw text.
+    # If they are scriptblocks, they will be applied to the deserialized JSON.
+    # These filters will be run within the WebSocket job.
+    [PSObject[]]
+    $Filter,
 
     # If set, will watch the output of a WebSocket job for one or more conditions.
     # The conditions are the keys of the dictionary, and can be a regex, a string, or a scriptblock.
@@ -286,8 +294,9 @@ function Get-WebSocket {
             $Variable.WebSocket = $ws
 
             $MessageCount = [long]0
-                                                
-            while ($true) {
+            $FilteredCount = [long]0
+
+            :WebSocketMessageLoop while ($true) {
                 if ($ws.State -ne 'Open') {break }
                 if ($TimeOut -and ([DateTime]::Now - $webSocketStartTime) -gt $TimeOut) {
                     $ws.CloseAsync([Net.WebSockets.WebSocketCloseStatus]::NormalClosure, 'Timeout', $CT).Wait()
@@ -308,12 +317,38 @@ function Get-WebSocket {
                     $webSocketMessage =
                         if ($Binary) {
                             $Buf -gt 0
-                        } elseif ($RawText) {
-                            $OutputEncoding.GetString($Buf, 0, $Buf.Count)
                         } else {
-                            $JS = $OutputEncoding.GetString($Buf, 0, $Buf.Count)
-                            if ([string]::IsNullOrWhitespace($JS)) { continue }
-                            ConvertFrom-Json $JS
+                            $messageString = $OutputEncoding.GetString($Buf, 0, $Buf.Count)
+                            if ($Filter) {
+                                foreach ($fil in $filter) {
+                                    if ($fil -is [string] -and $messageString -like "*$fil*") {
+                                        $FilteredCount++
+                                        continue WebSocketMessageLoop
+                                    }
+                                    if ($fil -is [regex] -and $fil.IsMatch($messageString)) {
+                                        $FilteredCount++
+                                        continue WebSocketMessageLoop
+                                    }
+                                }
+                            }
+                            if ($RawText) {
+                                $messageString
+                            } else {
+                                $MessageObject = ConvertFrom-Json -InputObject $messageString
+                                if ($filter) {
+                                    foreach ($fil in $Filter) {
+                                        if ($fil -is [ScriptBlock] -or 
+                                            $fil -is [Management.Automation.CommandInfo]
+                                        ) {
+                                            if (& $fil $MessageObject) {
+                                                $FilteredCount++
+                                                continue WebSocketMessageLoop
+                                            }
+                                        }
+                                    }
+                                }
+                                $MessageObject
+                            }
                         }
                     if ($PSTypeName) {
                         $webSocketMessage.pstypenames.clear()
@@ -351,14 +386,17 @@ function Get-WebSocket {
     }
 
     process {
+        # First, let's pack all of the parameters into a dictionary of variables.
         foreach ($keyValuePair in $PSBoundParameters.GetEnumerator()) {
             $Variable[$keyValuePair.Key] = $keyValuePair.Value
         }
+        # If `-Debug` was passed,
         if ($DebugPreference -notin 'SilentlyContinue','Ignore') {
+            # run the job in the current scope (so we can debug it).
             . $SocketJob -Variable $Variable
             return
         }
-        $webSocketJob = 
+        $webSocketJob =
             if ($WebSocketUri) {
                 if (-not $name) {
                     $Name = $WebSocketUri
