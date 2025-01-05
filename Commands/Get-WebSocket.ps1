@@ -106,7 +106,7 @@ function Get-WebSocket {
             Sort Count -Descending |
             Select -First 10
     #>
-    [CmdletBinding(PositionalBinding=$false)]
+    [CmdletBinding(PositionalBinding=$false,SupportsPaging)]
     [Alias('WebSocket')]
     param(
     # The Uri of the WebSocket to connect to.
@@ -295,6 +295,7 @@ function Get-WebSocket {
 
             $MessageCount = [long]0
             $FilteredCount = [long]0
+            $SkipCount = [long]0            
 
             :WebSocketMessageLoop while ($true) {
                 if ($ws.State -ne 'Open') {break }
@@ -303,7 +304,9 @@ function Get-WebSocket {
                     break
                 }
 
-                if ($Maximum -and $MessageCount -ge $Maximum) {
+                if ($Maximum -and (
+                    ($MessageCount - $FilteredCount) -ge $Maximum
+                )) {
                     $ws.CloseAsync([Net.WebSockets.WebSocketCloseStatus]::NormalClosure, 'Maximum messages reached', $CT).Wait()
                     break
                 }
@@ -347,7 +350,16 @@ function Get-WebSocket {
                                         }
                                     }
                                 }
+                                if ($Skip -and ($SkipCount -le $Skip)) {
+                                    $SkipCount++
+                                    continue WebSocketMessageLoop
+                                }
+                                
+                                
                                 $MessageObject
+                                if ($First -and ($MessageCount - $FilteredCount - $SkipCount) -ge $First) {
+                                    $Maximum = $first
+                                }
                             }
                         }
                     if ($PSTypeName) {
