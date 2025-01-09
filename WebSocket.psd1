@@ -7,7 +7,7 @@
     Copyright = '2024 StartAutomating'
     Description = 'Work with WebSockets in PowerShell'
     FunctionsToExport = @('Get-WebSocket')
-    AliasesToExport = @('WebSocket')
+    AliasesToExport = @('WebSocket','ws','wss')
     PrivateData = @{
         PSData = @{
             Tags = @('WebSocket', 'WebSockets', 'Networking', 'Web')
