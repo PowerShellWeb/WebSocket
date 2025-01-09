@@ -107,12 +107,19 @@ function Get-WebSocket {
             Select -First 10
     #>
     [CmdletBinding(PositionalBinding=$false,SupportsPaging)]
-    [Alias('WebSocket')]
+    [Alias('WebSocket','ws','wss')]
     param(
-    # The Uri of the WebSocket to connect to.
+    # The WebSocket Uri.
     [Parameter(Position=0,ValueFromPipelineByPropertyName)]
     [Alias('Url','Uri')]
     [uri]$WebSocketUri,
+
+    # One or more root urls.
+    # If these are provided, a WebSocket server will be created with these listener prefixes.
+    [Parameter(Position=1,ValueFromPipelineByPropertyName)]
+    [Alias('HostHeader','Host','ServerURL','ListenerPrefix','ListenerPrefixes','ListenerUrl')]
+    [string[]]
+    $RootUrl,
 
     # A collection of query parameters.
     # These will be appended onto the `-WebSocketUri`.
@@ -238,7 +245,7 @@ function Get-WebSocket {
     )
 
     begin {
-        $SocketJob = {
+        $SocketClientJob = {
             param(
                 # By accepting a single parameter containing variables, 
                 # we can avoid the need to pass in a large number of parameters.
@@ -250,6 +257,8 @@ function Get-WebSocket {
             foreach ($keyValue in $variable.GetEnumerator()) {
                 $ExecutionContext.SessionState.PSVariable.Set($keyValue.Key, $keyValue.Value)
             }
+
+            $Variable.JobRunspace = [Runspace]::DefaultRunspace
 
             if ((-not $WebSocketUri)) {
                 throw "No WebSocketUri"
@@ -288,7 +297,7 @@ function Get-WebSocket {
                 $null = $ws.ConnectAsync($WebSocketUri, $CT).Wait()
             } else {
                 $ws = $WebSocket
-            }
+            }            
 
             $webSocketStartTime = $Variable.WebSocketStartTime = [DateTime]::Now
             $Variable.WebSocket = $ws
@@ -394,7 +403,7 @@ function Get-WebSocket {
                     Write-Error $_
                 }
             }
-        }                        
+        }                    
     }
 
     process {
@@ -405,7 +414,7 @@ function Get-WebSocket {
         # If `-Debug` was passed,
         if ($DebugPreference -notin 'SilentlyContinue','Ignore') {
             # run the job in the current scope (so we can debug it).
-            . $SocketJob -Variable $Variable
+            . $SocketClientJob -Variable $Variable
             return
         }
         $webSocketJob =
@@ -427,13 +436,8 @@ function Get-WebSocket {
                 if ($existingJob) {
                     $existingJob
                 } else {
-                    Start-ThreadJob -ScriptBlock $SocketJob -Name $Name -InitializationScript $InitializationScript -ArgumentList $Variable
+                    Start-ThreadJob -ScriptBlock $SocketClientJob -Name $Name -InitializationScript $InitializationScript -ArgumentList $Variable
                 }                                            
-            } elseif ($WebSocket) {
-                if (-not $name) {
-                    $name = "websocket"
-                }
-                Start-ThreadJob -ScriptBlock $SocketJob -Name $Name -InitializationScript $InitializationScript -ArgumentList $Variable
             }
 
         $subscriptionSplat = @{
@@ -470,7 +474,7 @@ function Get-WebSocket {
                     [psnoteproperty]::new($keyValuePair.Key, $keyValuePair.Value), $true
                 )
             }
-            $webSocketJob.pstypenames.insert(0, 'WebSocketJob')
+            $webSocketJob.pstypenames.insert(0, 'WebSocket.ThreadJob')
         }        
         
         if ($Watch) {
