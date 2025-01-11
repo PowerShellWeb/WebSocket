@@ -403,6 +403,109 @@ function Get-WebSocket {
                     Write-Error $_
                 }
             }
+        }
+        $SocketServerJob = {
+            <#
+            .SYNOPSIS
+                A fairly simple WebSocket server
+            .DESCRIPTION
+                A fairly simple WebSocket server
+            #>
+            param(
+                # By accepting a single parameter containing variables, 
+                # we can avoid the need to pass in a large number of parameters.
+                # we can also modify this dictionary, to provide a way to pass information back.
+                [Collections.IDictionary]$Variable
+            )
+            
+            # Take every every `-Variable` passed in and define it within the job
+            foreach ($keyValue in $variable.GetEnumerator()) {
+                $ExecutionContext.SessionState.PSVariable.Set($keyValue.Key, $keyValue.Value)
+            }                
+            
+            # If there's no listener, create one.
+            if (-not $httpListener) {
+                $httpListener = $variable['HttpListener'] = [Net.HttpListener]::new()
+            }
+
+            # If the listener doesn't have a lookup table for SocketRequests, create one.
+            if (-not $httpListener.SocketRequests) {
+                $httpListener.psobject.properties.add(
+                    [psnoteproperty]::new('SocketRequests', [Ordered]@{}), $true)
+            }
+            
+            # If the listener isn't listening, start it.
+            if (-not $httpListener.IsListening) { $httpListener.Start() }
+        
+            # While the listener is listening,
+            while ($httpListener.IsListening) {
+                # get the context asynchronously.
+                $contextAsync = $httpListener.GetContextAsync()
+                # and wait for it to complete.
+                while (-not ($contextAsync.IsCompleted -or $contextAsync.IsFaulted -or $contextAsync.IsCanceled)) {
+                    # while this is going on, other events can be processed, and CTRL-C can exit.
+                }
+                # If async method fails,
+                if ($contextAsync.IsFaulted) {
+                    # write an error and continue.
+                    Write-Error -Exception $contextAsync.Exception -Category ProtocolError
+                    continue
+                }
+                # Get the context async result.
+                # The context is basically the next request and response in the queue.
+                $context = $(try { $contextAsync.Result } catch { $_ })
+                $RequestedUrl = $context.Request.Url
+                # Favicons are literally outdated, but they're still requested.
+                if ($RequestedUrl -match '/favicon.ico$') {
+                    # by returning a 404 for them, we can make the browser stop asking.
+                    $context.Response.StatusCode = 404
+                    $context.Response.Close()
+                    continue
+                }
+                # Now, for the fun part.
+                # We turn request into a PowerShell events.
+                # Each event will have the source identifier of the request scheme
+                $eventIdentifier = "$($context.Request.Url.Scheme)://"
+                # and by default it will pass a message containing the context.                                
+                $messageData = [Ordered]@{Url = $context.Request.Url;Context = $context}
+
+                # HttpListeners are quite nice, especially when it comes to websocket upgrades.
+                # If the request is a websocket request
+                if ($context.Request.IsWebSocketRequest) {
+                    # we will change the event identifier to a websocket scheme.
+                    $eventIdentifier = $eventIdentifier -replace '^http', 'ws'
+                    # and call the `AcceptWebSocketAsync` method to upgrade the connection.
+                    $acceptWebSocket = $context.AcceptWebSocketAsync('json')
+                    # Once again, we'll use a tight loop to wait for the upgrade to complete or fail.
+                    while (-not ($acceptWebSocket.IsCompleted -or $acceptWebSocket.IsFaulted -or $acceptWebSocket.IsCanceled)) { }
+                    # and if it fails,
+                    if ($acceptWebSocket.IsFaulted) {
+                        # we will write an error and continue.
+                        Write-Error -Exception $acceptWebSocket.Exception -Category ProtocolError
+                        continue
+                    }
+                    # If it succeeds, capture the result.
+                    $webSocketResult = try { $acceptWebSocket.Result } catch { $_ }
+                    # and add it to the SocketRequests lookup table, using the request trace identifier as the key.
+                    $httpListener.SocketRequests[$context.Request.RequestTraceIdentifier] = $webSocketResult
+                    # and add the websocketcontext result to the message data.
+                    $messageData["WebSocketContext"] = $webSocketResult
+                    # also add the websocket result to the message data, since many might not exactly know what a "WebSocketContext" is.
+                    $messageData["WebSocket"] = $webSocketResult.WebSocket                    
+                }
+                
+                # Now, we generate the event.
+                $generateEventArguments = @(
+                    $eventIdentifier, 
+                    $httpListener, 
+                    @($context)
+                    $messageData
+                )
+                # Get a pointer to the GenerateEvent method (we'll want this later)
+                if ($MainRunspace.Events.GenerateEvent) {
+                    $MainRunspace.Events.GenerateEvent.Invoke($generateEventArguments)
+                }
+            }
         }                    
     }
 
@@ -411,6 +514,34 @@ function Get-WebSocket {
         foreach ($keyValuePair in $PSBoundParameters.GetEnumerator()) {
             $Variable[$keyValuePair.Key] = $keyValuePair.Value
         }
+        
+        $Variable['MainRunspace'] = [Runspace]::DefaultRunspace
+
+        # If we're going to be listening for HTTP requests, run a thread job for the server.        
+        if ($RootUrl) {
+
+            $httpListener = $variable['HttpListener'] = [Net.HttpListener]::new()
+            foreach ($rootUrl in $RootUrl) {
+                if ($rootUrl -match '^https?://') {
+                    $httpListener.Prefixes.Add($rootUrl)
+                } else {
+                    $httpListener.Prefixes.Add("http://$rootUrl/")
+                    $httpListener.Prefixes.Add("https://$rootUrl/")
+                }
+            }
+            $httpListener.Start()
+            $httpListenerJob = Start-ThreadJob -ScriptBlock $SocketServerJob -Name "$RootUrl" -InitializationScript $InitializationScript -ArgumentList $Variable
+            
+            if ($httpListenerJob) {
+                foreach ($keyValuePair in $Variable.GetEnumerator()) {
+                    $httpListenerJob.psobject.properties.add(
+                        [psnoteproperty]::new($keyValuePair.Key, $keyValuePair.Value), $true
+                    )
+                }
+                $httpListenerJob
+            }                        
+        }
+
         # If `-Debug` was passed,
         if ($DebugPreference -notin 'SilentlyContinue','Ignore') {
             # run the job in the current scope (so we can debug it).
@@ -477,7 +608,7 @@ function Get-WebSocket {
             $webSocketJob.pstypenames.insert(0, 'WebSocket.ThreadJob')
         }        
         
-        if ($Watch) {
+        if ($Watch -and $webSocketJob) {
             do {
                 $webSocketJob | Receive-Job
                 Start-Sleep -Milliseconds (
@@ -485,7 +616,7 @@ function Get-WebSocket {
                 ) 
             } while ($webSocketJob.State -in 'Running','NotStarted')
         } 
-        elseif ($WatchFor) {
+        elseif ($WatchFor -and $webSocketJob) {
             . {
                 do {                
                     $webSocketJob | Receive-Job
@@ -512,7 +643,7 @@ function Get-WebSocket {
                 }
             }
         }
-        else {
+        elseif ($webSocketJob) {
             $webSocketJob
         }        
     }
