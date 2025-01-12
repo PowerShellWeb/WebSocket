@@ -270,6 +270,13 @@ If set, will output the raw bytes that come out of the WebSocket.
 |----------|--------|--------|-------------|---------------------------------------|
 |`[Switch]`|false   |named   |false        |RawByte<br/>RawBytes<br/>Bytes<br/>Byte|
 
+#### **Force**
+If set, will force a new job to be created, rather than reusing an existing job.
+
+|Type      |Required|Position|PipelineInput|
+|----------|--------|--------|-------------|
+|`[Switch]`|false   |named   |false        |
+
 #### **SubProtocol**
 The subprotocol used by the websocket.  If not provided, this will default to `json`.
 
@@ -365,5 +372,5 @@ RunspacePools allow you to limit the scope of the handler to a pool of runspaces
 
 ### Syntax
 ```PowerShell
-Get-WebSocket [[-WebSocketUri] <Uri>] [[-RootUrl] <String[]>] [-Route <IDictionary>] [-HTML <String>] [-QueryParameter <IDictionary>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-RawText] [-Binary] [-SubProtocol <String>] [-Filter <PSObject[]>] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-PSTypeName <String[]>] [-Maximum <Int64>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [-IncludeTotalCount] [-Skip <UInt64>] [-First <UInt64>] [<CommonParameters>]
+Get-WebSocket [[-WebSocketUri] <Uri>] [[-RootUrl] <String[]>] [-Route <IDictionary>] [-HTML <String>] [-QueryParameter <IDictionary>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-RawText] [-Binary] [-Force] [-SubProtocol <String>] [-Filter <PSObject[]>] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-PSTypeName <String[]>] [-Maximum <Int64>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [-IncludeTotalCount] [-Skip <UInt64>] [-First <UInt64>] [<CommonParameters>]
 ```
