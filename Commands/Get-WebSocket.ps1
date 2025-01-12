@@ -161,6 +161,9 @@ function Get-WebSocket {
     [int]
     $BufferSize = 64kb,
 
+    [PSObject]
+    $Broadcast,
+
     # The ScriptBlock to run after connection to a websocket.
     # This can be useful for making any initial requests.
     [ScriptBlock]
@@ -771,6 +774,7 @@ function Get-WebSocket {
             } else {                
                 if ($existingJob -and -not $Force) {
                     $httpListenerJob = $existingJob
+                    $httpListener = $existingJob.HttpListener
                 } else {
                     $httpListenerJob = Start-ThreadJob -ScriptBlock $SocketServerJob -Name "$RootUrl" -InitializationScript $InitializationScript -ArgumentList $Variable
                 }                
@@ -783,7 +787,33 @@ function Get-WebSocket {
                     )
                 }
                 $httpListenerJob
-            }            
+            }
+
+            if ($Broadcast) {
+                if (-not $httpListener.SocketRequests) {
+                    Write-Warning "No WebSocket connections to broadcast to."
+                } else {
+                    if ($broadcast -is [byte[]]) {
+                        $broadcast = [ArraySegment[byte]]::new($broadcast)
+                    }
+                    if ($broadcast -is [System.ArraySegment[byte]]) {
+                        foreach ($socketRequest in $httpListener.SocketRequests.Values) {
+                            $socketRequest.WebSocket.SendAsync($broadcast, 'Binary', 'EndOfMessage', [Threading.CancellationToken]::None)
+                        }                            
+                    }
+                    else {
+                        foreach ($broadcastItem in $Broadcast) {
+                            $broadcastJson = ConvertTo-Json -InputObject $broadcastItem
+                            $broadcastJsonBytes = $OutputEncoding.GetBytes($broadcastJson)
+                            $broadcastSegment = [ArraySegment[byte]]::new($broadcastJsonBytes)
+                            foreach ($socketRequest in $httpListener.SocketRequests.Values) {
+                                $socketRequest.WebSocket.SendAsync($broadcastSegment, 'Text', 'EndOfMessage', [Threading.CancellationToken]::None)
+                            }
+                        }
+                    }                    
+                }
+                
+            }
         }
 
         # If `-Debug` was passed,
