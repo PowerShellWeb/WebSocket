@@ -111,7 +111,7 @@ function Get-WebSocket {
     param(
     # The WebSocket Uri.
     [Parameter(Position=0,ValueFromPipelineByPropertyName)]
-    [Alias('Url','Uri','WebSocketUrl','WebSocketUri')]
+    [Alias('Url','Uri','WebSocketUrl')]
     [uri]
     $WebSocketUri,
 
