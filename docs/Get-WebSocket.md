@@ -149,17 +149,32 @@ $somePosts |
 #### **WebSocketUri**
 The WebSocket Uri.
 
-|Type   |Required|Position|PipelineInput        |Aliases    |
-|-------|--------|--------|---------------------|-----------|
-|`[Uri]`|false   |1       |true (ByPropertyName)|Url<br/>Uri|
+|Type   |Required|Position|PipelineInput        |Aliases                     |
+|-------|--------|--------|---------------------|----------------------------|
+|`[Uri]`|false   |1       |true (ByPropertyName)|Url<br/>Uri<br/>WebSocketUrl|
 
 #### **RootUrl**
 One or more root urls.
 If these are provided, a WebSocket server will be created with these listener prefixes.
 
-|Type        |Required|Position|PipelineInput        |Aliases                                                                                  |
-|------------|--------|--------|---------------------|-----------------------------------------------------------------------------------------|
-|`[String[]]`|false   |2       |true (ByPropertyName)|HostHeader<br/>Host<br/>ServerURL<br/>ListenerPrefix<br/>ListenerPrefixes<br/>ListenerUrl|
+|Type        |Required|Position|PipelineInput        |Aliases                                                                                            |
+|------------|--------|--------|---------------------|---------------------------------------------------------------------------------------------------|
+|`[String[]]`|false   |2       |true (ByPropertyName)|HostHeader<br/>Host<br/>CNAME<br/>ServerURL<br/>ListenerPrefix<br/>ListenerPrefixes<br/>ListenerUrl|
+
+#### **Route**
+A route table for all requests.
+
+|Type           |Required|Position|PipelineInput        |Aliases                                       |
+|---------------|--------|--------|---------------------|----------------------------------------------|
+|`[IDictionary]`|false   |named   |true (ByPropertyName)|Routes<br/>RouteTable<br/>WebHook<br/>WebHooks|
+
+#### **HTML**
+The Default HTML.
+This will be displayed when visiting the root url.
+
+|Type      |Required|Position|PipelineInput        |Aliases                                                     |
+|----------|--------|--------|---------------------|------------------------------------------------------------|
+|`[String]`|false   |named   |true (ByPropertyName)|DefaultHTML<br/>Home<br/>Index<br/>IndexHTML<br/>DefaultPage|
 
 #### **QueryParameter**
 A collection of query parameters.
@@ -350,5 +365,5 @@ RunspacePools allow you to limit the scope of the handler to a pool of runspaces
 
 ### Syntax
 ```PowerShell
-Get-WebSocket [[-WebSocketUri] <Uri>] [[-RootUrl] <String[]>] [-QueryParameter <IDictionary>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-RawText] [-Binary] [-SubProtocol <String>] [-Filter <PSObject[]>] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-PSTypeName <String[]>] [-Maximum <Int64>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [-IncludeTotalCount] [-Skip <UInt64>] [-First <UInt64>] [<CommonParameters>]
+Get-WebSocket [[-WebSocketUri] <Uri>] [[-RootUrl] <String[]>] [-Route <IDictionary>] [-HTML <String>] [-QueryParameter <IDictionary>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-RawText] [-Binary] [-SubProtocol <String>] [-Filter <PSObject[]>] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-PSTypeName <String[]>] [-Maximum <Int64>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [-IncludeTotalCount] [-Skip <UInt64>] [-First <UInt64>] [<CommonParameters>]
 ```
