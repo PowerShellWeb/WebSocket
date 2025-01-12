@@ -193,6 +193,10 @@ function Get-WebSocket {
     [switch]
     $Binary,
 
+    # If set, will force a new job to be created, rather than reusing an existing job.
+    [switch]
+    $Force,
+
     # The subprotocol used by the websocket.  If not provided, this will default to `json`.
     [string]
     $SubProtocol,
@@ -436,6 +440,8 @@ function Get-WebSocket {
             foreach ($keyValue in $variable.GetEnumerator()) {
                 $ExecutionContext.SessionState.PSVariable.Set($keyValue.Key, $keyValue.Value)
             }
+
+            $Variable.JobRunspace = [Runspace]::DefaultRunspace
 
             # If we have routes, we will cache all of their possible parameters now
             if ($route.Count) {
@@ -782,7 +788,7 @@ function Get-WebSocket {
                     }
                 }
 
-                if ($existingJob) {
+                if ($existingJob -and -not $Force) {
                     $existingJob
                 } else {
                     Start-ThreadJob -ScriptBlock $SocketClientJob -Name $Name -InitializationScript $InitializationScript -ArgumentList $Variable
