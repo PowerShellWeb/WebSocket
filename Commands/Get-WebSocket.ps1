@@ -191,7 +191,7 @@ function Get-WebSocket {
     # If set, will output the raw bytes that come out of the WebSocket.
     [Alias('RawByte','RawBytes','Bytes','Byte')]
     [switch]
-    $Binary,
+    $Binary,    
 
     # If set, will force a new job to be created, rather than reusing an existing job.
     [switch]
@@ -383,7 +383,7 @@ function Get-WebSocket {
                                 }
                                 
                                 
-                                $MessageObject
+                                $MessageObject                                
                                 if ($First -and ($MessageCount - $FilteredCount - $SkipCount) -ge $First) {
                                     $Maximum = $first
                                 }
@@ -739,22 +739,42 @@ function Get-WebSocket {
         # If we're going to be listening for HTTP requests, run a thread job for the server.        
         if ($RootUrl) {
 
-            $variable['HttpListener'] = $httpListener = [Net.HttpListener]::new()
-            foreach ($potentialPrefix in $RootUrl) {
-                if ($potentialPrefix -match '^https?://') {
-                    $httpListener.Prefixes.Add($potentialPrefix)
-                } else {
-                    $httpListener.Prefixes.Add("http://$potentialPrefix/")
-                    $httpListener.Prefixes.Add("https://$potentialPrefix/")
+            if (-not $Name) {
+                $Name = "$($RootUrl -join '|')"
+            }
+
+            $existingJob = foreach ($jobWithThisName in (Get-Job -Name $Name -ErrorAction Ignore)) {
+                if (
+                    $jobWithThisName.State -in 'Running','NotStarted' -and
+                    $jobWithThisName.HttpListener -is [Net.HttpListener]
+                ) {
+                    $jobWithThisName
+                    break
                 }
             }
-            $httpListener.Start()
+
+            if ((-not $existingJob) -or $Force) {
+                $variable['HttpListener'] = $httpListener = [Net.HttpListener]::new()
+                foreach ($potentialPrefix in $RootUrl) {
+                    if ($potentialPrefix -match '^https?://') {
+                        $httpListener.Prefixes.Add($potentialPrefix)
+                    } else {
+                        $httpListener.Prefixes.Add("http://$potentialPrefix/")
+                        $httpListener.Prefixes.Add("https://$potentialPrefix/")
+                    }
+                }
+                $httpListener.Start()
+            }            
 
             if ($DebugPreference -notin 'SilentlyContinue','Ignore') {
                 . $SocketServerJob -Variable $Variable
-            } else {
-                $httpListenerJob = Start-ThreadJob -ScriptBlock $SocketServerJob -Name "$RootUrl" -InitializationScript $InitializationScript -ArgumentList $Variable
-            }            
+            } else {                
+                if ($existingJob -and -not $Force) {
+                    $httpListenerJob = $existingJob
+                } else {
+                    $httpListenerJob = Start-ThreadJob -ScriptBlock $SocketServerJob -Name "$RootUrl" -InitializationScript $InitializationScript -ArgumentList $Variable
+                }                
+            }
             
             if ($httpListenerJob) {
                 foreach ($keyValuePair in $Variable.GetEnumerator()) {
@@ -763,7 +783,7 @@ function Get-WebSocket {
                     )
                 }
                 $httpListenerJob
-            }                        
+            }            
         }
 
         # If `-Debug` was passed,
