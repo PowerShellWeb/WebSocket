@@ -111,15 +111,29 @@ function Get-WebSocket {
     param(
     # The WebSocket Uri.
     [Parameter(Position=0,ValueFromPipelineByPropertyName)]
-    [Alias('Url','Uri')]
-    [uri]$WebSocketUri,
+    [Alias('Url','Uri','WebSocketUrl','WebSocketUri')]
+    [uri]
+    $WebSocketUri,
 
     # One or more root urls.
     # If these are provided, a WebSocket server will be created with these listener prefixes.
     [Parameter(Position=1,ValueFromPipelineByPropertyName)]
-    [Alias('HostHeader','Host','ServerURL','ListenerPrefix','ListenerPrefixes','ListenerUrl')]
+    [Alias('HostHeader','Host','CNAME','ServerURL','ListenerPrefix','ListenerPrefixes','ListenerUrl')]
     [string[]]
     $RootUrl,
+
+    # A route table for all requests.
+    [Parameter(ValueFromPipelineByPropertyName)]
+    [Alias('Routes','RouteTable','WebHook','WebHooks')]
+    [Collections.IDictionary]
+    $Route,
+
+    # The Default HTML.
+    # This will be displayed when visiting the root url.
+    [Parameter(ValueFromPipelineByPropertyName)]
+    [Alias('DefaultHTML','Home','Index','IndexHTML','DefaultPage')]
+    [string]
+    $HTML,
 
     # A collection of query parameters.
     # These will be appended onto the `-WebSocketUri`.
@@ -421,7 +435,33 @@ function Get-WebSocket {
             # Take every every `-Variable` passed in and define it within the job
             foreach ($keyValue in $variable.GetEnumerator()) {
                 $ExecutionContext.SessionState.PSVariable.Set($keyValue.Key, $keyValue.Value)
-            }                
+            }
+
+            # If we have routes, we will cache all of their possible parameters now
+            if ($route.Count) {
+                # We want to keep the parameter sets
+                $routeParameterSets = [Ordered]@{}
+                # and the metadata about parameters. 
+                $routeParameters = [Ordered]@{}
+                
+                # For each key and value in the route table, we will try to get the command info for the value.
+                foreach ($routePair in $route.GetEnumerator()) {
+                    $routeToCmd =
+                        # If the value is a scriptblock
+                        if ($routePair.Value -is [ScriptBlock]) {
+                            # we have to create a temporary function
+                            $function:TempFunction = $routePair.Value
+                            # and get that function.
+                            $ExecutionContext.SessionState.InvokeCommand.GetCommand('TempFunction', 'Function')
+                        } elseif ($routePair.Value -is [Management.Automation.CommandInfo]) {
+                            $routePair.Value
+                        }
+                    if ($routeToCmd) {
+                        $routeParameterSets[$routePair.Name] = $routeToCmd.ParametersSets
+                        $routeParameters[$routePair.Name] = $routeToCmd.Parameters
+                    }
+                }
+            }
             
             # If there's no listener, create one.
             if (-not $httpListener) {
@@ -454,7 +494,12 @@ function Get-WebSocket {
                 # Get the context async result.
                 # The context is basically the next request and response in the queue.
                 $context = $(try { $contextAsync.Result } catch { $_ })
-                $RequestedUrl = $context.Request.Url
+
+                # yield the context immediately, in case anything is watching the output of this job
+                $context
+
+                $Request, $response = $context.Request, $context.Response
+                $RequestedUrl = $Request.Url
                 # Favicons are literally outdated, but they're still requested.
                 if ($RequestedUrl -match '/favicon.ico$') {
                     # by returning a 404 for them, we can make the browser stop asking.
@@ -464,16 +509,18 @@ function Get-WebSocket {
                 }
                 # Now, for the fun part.
                 # We turn request into a PowerShell events.
-                # Each event will have the source identifier of the request scheme
-                $eventIdentifier = "$($context.Request.Url.Scheme)://"
+                # The protocol is the scheme of the request url.
+                $Protocol = $RequestedUrl.Scheme
+                # Each event will have the source identifier of the protocol, followed by ://                
+                $eventIdentifier = "$($Protocol)://"
                 # and by default it will pass a message containing the context.                                
-                $messageData = [Ordered]@{Url = $context.Request.Url;Context = $context}
+                $messageData = [Ordered]@{Protocol = $protocol; Url = $context.Request.Url;Context = $context}
 
                 # HttpListeners are quite nice, especially when it comes to websocket upgrades.
                 # If the request is a websocket request
-                if ($context.Request.IsWebSocketRequest) {
+                if ($Request.IsWebSocketRequest) {
                     # we will change the event identifier to a websocket scheme.
-                    $eventIdentifier = $eventIdentifier -replace '^http', 'ws'
+                    $eventIdentifier = $eventIdentifier -replace '^http', 'ws'                    
                     # and call the `AcceptWebSocketAsync` method to upgrade the connection.
                     $acceptWebSocket = $context.AcceptWebSocketAsync('json')
                     # Once again, we'll use a tight loop to wait for the upgrade to complete or fail.
@@ -486,18 +533,26 @@ function Get-WebSocket {
                     }
                     # If it succeeds, capture the result.
                     $webSocketResult = try { $acceptWebSocket.Result } catch { $_ }
-                    # and add it to the SocketRequests lookup table, using the request trace identifier as the key.
-                    $httpListener.SocketRequests[$context.Request.RequestTraceIdentifier] = $webSocketResult
-                    # and add the websocketcontext result to the message data.
-                    $messageData["WebSocketContext"] = $webSocketResult
-                    # also add the websocket result to the message data, since many might not exactly know what a "WebSocketContext" is.
-                    $messageData["WebSocket"] = $webSocketResult.WebSocket                    
+
+                    # If the websocket is open
+                    if ($webSocketResult.WebSocket.State -eq 'open') {
+                        # we have switched protocols!
+                        $Protocol = $requestedUrl.Scheme -replace '^http', 'ws'
+
+                        # Now add the result it to the SocketRequests lookup table, using the request trace identifier as the key.
+                        $httpListener.SocketRequests[$context.Request.RequestTraceIdentifier] = $webSocketResult
+                        # and add the websocketcontext result to the message data.
+                        $messageData["WebSocketContext"] = $webSocketResult
+                        # also add the websocket result to the message data,
+                        # since many might not exactly know what a "WebSocketContext" is.
+                        $messageData["WebSocket"] = $webSocketResult.WebSocket
+                    }
                 }
                 
                 # Now, we generate the event.
                 $generateEventArguments = @(
-                    $eventIdentifier, 
-                    $httpListener, 
+                    $eventIdentifier,
+                    $httpListener,
                     @($context)
                     $messageData
                 )
@@ -505,11 +560,169 @@ function Get-WebSocket {
                 if ($MainRunspace.Events.GenerateEvent) {
                     $MainRunspace.Events.GenerateEvent.Invoke($generateEventArguments)
                 }
+
+                # Everything below this point is for HTTP requests.
+                if ($protocol -notmatch '^http') {
+                    continue # so if we're already a websocket, we will skip the rest of this code.
+                }
+
+                $routedTo = $null
+                $routeKey = $null
+                # If we have routes, we will try to find a route that matches the request.
+                if ($route.Count) {
+                    $routeTable = $route
+                    $potentialRouteKeys = @(
+                        $request.Url.AbsolutePath,
+                        ($request.Url.AbsolutePath -replace '/$'),
+                        "$($request.HttpMethod) $($request.Url.AbsolutePath)",
+                        "$($request.HttpMethod) $($request.Url.AbsolutePath -replace '/$')"
+                        "$($request.HttpMethod) $($request.Url.LocalPath)",
+                        "$($request.HttpMethod) $($request.Url.LocalPath -replace '/$')"
+                    )
+                    $routedTo = foreach ($potentialKey in $potentialRouteKeys) {
+                        if ($routeTable[$potentialKey]) {
+                            $routeTable[$potentialKey]
+                            $routeKey = $potentialKey
+                            break
+                        }
+                    }
+                }
+
+                if (-not $routedTo -and $html) {
+                    $routedTo = 
+                        # If the content is already html, we will use it as is.
+                        if ($html -match '\<html') {
+                            $html
+                        } else {
+                            # Otherwise, we will wrap it in an html tag.
+                            @(
+                                "<html>"
+                                "<head>"
+                                # and apply the site header.
+                                $SiteHeader
+                                "</head>"
+                                "<body>"
+                                $html
+                                "</body>"
+                                "</html>"
+                            ) -join [Environment]::NewLine
+                    }
+                }
+
+                # If we routed to a string, we will close the response with the string.
+                if ($routedTo -is [string]) {
+                    $response.Close($OutputEncoding.GetBytes($routedTo), $true)
+                    continue
+                }
+
+                # If we've routed to is a byte array, we will close the response with the byte array.
+                if ($routedTo -is [byte[]]) {
+                    $response.Close($routedTo, $true)
+                    continue
+                }                
+                    
+                # If we routed to a script block or command, we will try to execute it.
+                if ($routedTo -is [ScriptBlock] -or 
+                    $routedTo -is [Management.Automation.CommandInfo]) {
+                    $routeSplat = [Ordered]@{}
+
+                    # If the command had a `-Request` parameter, we will pass the request object.
+                    if ($routeParameters -and $routeParameters[$routeKey].Request) {
+                        $routeSplat['Request'] = $request
+                    }
+                    # If the command had a `-Response` parameter, we will pass the response object.
+                    if ($routeParameters -and $routeParameters[$routeKey].Response) {
+                        $routeSplat['Response'] = $response
+                    }
+
+                    # If the request has a query string, we will parse it and pass the values to the command.
+                    if ($request.Url.QueryString) {
+                        $parsedQuery = [Web.HttpUtility]::ParseQueryString($request.Url.QueryString)
+                        foreach ($parsedQueryKey in $parsedQuery.Keys) {
+                            if ($routeParameters[$routeKey][$parsedQueryKey]) {
+                                $routeSplat[$parsedQueryKey] = $parsedQuery[$parsedQueryKey]
+                            }
+                        }
+                    }
+                    # If the request has a content type of json, we will parse the json and pass the values to the command.
+                    if ($request.ContentType -match '^(?>application|text)/json') {
+                        $streamReader = [IO.StreamReader]::new($request.InputStream)
+                        $json = $streamReader.ReadToEnd()
+                        $jsonHashtable = ConvertFrom-Json -InputObject $json -AsHashtable
+                        foreach ($keyValuePair in $jsonHashtable.GetEnumerator()) {
+                            if ($routeParameters[$routeKey][$keyValuePair.Key]) {
+                                $routeSplat[$keyValuePair.Key] = $keyValuePair.Value
+                            }
+                        }
+                        $streamReader.Close()
+                        $streamReader.Dispose()
+                    }
+
+                    # If the request has a content type of form-urlencoded, we will parse the form and pass the values to the command.
+                    if ($request.ContentType -eq 'application/x-www-form-urlencoded') {
+                        $streamReader = [IO.StreamReader]::new($request.InputStream)
+                        $formData = [Web.HttpUtility]::ParseQueryString($streamReader.ReadToEnd())
+                        foreach ($formKey in $formData.Keys) {
+                            if ($routeParameters[$routeKey][$formKey]) {
+                                $routeSplat[$formKey] = $form[$formKey]
+                            }
+                        }
+                        $streamReader.Close()
+                        $streamReader.Dispose()
+                    }
+
+                    # We will execute the command and get the output.
+                    $routeOutput = . $routedTo @routeSplat
+                    
+                    # If the output is a string, we will close the response with the string.
+                    if ($routeOutput -is [string]) 
+                    {                        
+                        $response.Close($OutputEncoding.GetBytes($routeOutput), $true)
+                        continue
+                    }
+                    # If the output is a byte array, we will close the response with the byte array.
+                    elseif ($routeOutput -is [byte[]]) 
+                    {
+                        $response.Close($routeOutput, $true)
+                        continue
+                    }
+                    # If the response is an array, write the responses out one at a time.
+                    # (note: this will likely be changed in the future)
+                    elseif ($routeOutput -is [object[]]) {
+                        foreach ($routeOut in $routeOutput) {                                
+                            if ($routeOut -is [string]) {
+                                $routeOut = $OutputEncoding.GetBytes($routeOut)
+                            }
+                            if ($routeOut -is [byte[]]) {
+                                $response.OutputStream.Write($routeOut, 0, $routeOut.Length)
+                            }
+                        }
+                        $response.Close()
+                    }
+                    else {
+                        # If the response was an object, we will convert it to json and close the response with the json.
+                        $responseJson = ConvertTo-Json -InputObject $routeOutput -Depth 3
+                        $response.ContentType = 'application/json'
+                        $response.Close($OutputEncoding.GetBytes($responseJson), $true)
+                    }
+                }
             }
         }                    
     }
 
-    process {
+    process {        
+        if ((-not $WebSocketUri) -and (-not $RootUrl)) {
+            $socketAndListenerJobs =
+                foreach ($job in Get-Job) {
+                    if (
+                        $Job.WebSocket -is [Net.WebSockets.ClientWebSocket] -or 
+                        $Job.HttpListener -is [Net.HttpListener]
+                    ) {
+                        $job
+                    }
+                }
+            $socketAndListenerJobs
+        }
         # First, let's pack all of the parameters into a dictionary of variables.
         foreach ($keyValuePair in $PSBoundParameters.GetEnumerator()) {
             $Variable[$keyValuePair.Key] = $keyValuePair.Value
@@ -520,17 +733,22 @@ function Get-WebSocket {
         # If we're going to be listening for HTTP requests, run a thread job for the server.        
         if ($RootUrl) {
 
-            $httpListener = $variable['HttpListener'] = [Net.HttpListener]::new()
-            foreach ($rootUrl in $RootUrl) {
-                if ($rootUrl -match '^https?://') {
-                    $httpListener.Prefixes.Add($rootUrl)
+            $variable['HttpListener'] = $httpListener = [Net.HttpListener]::new()
+            foreach ($potentialPrefix in $RootUrl) {
+                if ($potentialPrefix -match '^https?://') {
+                    $httpListener.Prefixes.Add($potentialPrefix)
                 } else {
-                    $httpListener.Prefixes.Add("http://$rootUrl/")
-                    $httpListener.Prefixes.Add("https://$rootUrl/")
+                    $httpListener.Prefixes.Add("http://$potentialPrefix/")
+                    $httpListener.Prefixes.Add("https://$potentialPrefix/")
                 }
             }
             $httpListener.Start()
-            $httpListenerJob = Start-ThreadJob -ScriptBlock $SocketServerJob -Name "$RootUrl" -InitializationScript $InitializationScript -ArgumentList $Variable
+
+            if ($DebugPreference -notin 'SilentlyContinue','Ignore') {
+                . $SocketServerJob -Variable $Variable
+            } else {
+                $httpListenerJob = Start-ThreadJob -ScriptBlock $SocketServerJob -Name "$RootUrl" -InitializationScript $InitializationScript -ArgumentList $Variable
+            }            
             
             if ($httpListenerJob) {
                 foreach ($keyValuePair in $Variable.GetEnumerator()) {
@@ -593,7 +811,7 @@ function Get-WebSocket {
             $variable['EventSubscriptions'] = $eventSubscriptions
         }
 
-        if ($webSocketJob) {
+        if ($webSocketJob -and -not $webSocketJob.WebSocket) {            
             $webSocketConnectTimeout = [DateTime]::Now + $ConnectionTimeout
             while (-not $variable['WebSocket'] -and 
                 ([DateTime]::Now -lt $webSocketConnectTimeout)) {
