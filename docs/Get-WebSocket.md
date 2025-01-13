@@ -332,6 +332,13 @@ The maximum number of messages to receive before closing the WebSocket.
 |---------|--------|--------|-------------|
 |`[Int64]`|false   |named   |false        |
 
+#### **ThrottleLimit**
+The throttle limit used when creating background jobs.
+
+|Type     |Required|Position|PipelineInput|
+|---------|--------|--------|-------------|
+|`[Int32]`|false   |named   |false        |
+
 #### **ConnectionTimeout**
 The maximum time to wait for a connection to be established.
 By default, this is 7 seconds.
@@ -378,5 +385,5 @@ RunspacePools allow you to limit the scope of the handler to a pool of runspaces
 
 ### Syntax
 ```PowerShell
-Get-WebSocket [[-WebSocketUri] <Uri>] [[-RootUrl] <String[]>] [-Route <IDictionary>] [-HTML <String>] [-QueryParameter <IDictionary>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-Broadcast <PSObject>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-RawText] [-Binary] [-Force] [-SubProtocol <String>] [-Filter <PSObject[]>] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-PSTypeName <String[]>] [-Maximum <Int64>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [-IncludeTotalCount] [-Skip <UInt64>] [-First <UInt64>] [<CommonParameters>]
+Get-WebSocket [[-WebSocketUri] <Uri>] [[-RootUrl] <String[]>] [-Route <IDictionary>] [-HTML <String>] [-QueryParameter <IDictionary>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-Broadcast <PSObject>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-RawText] [-Binary] [-Force] [-SubProtocol <String>] [-Filter <PSObject[]>] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-PSTypeName <String[]>] [-Maximum <Int64>] [-ThrottleLimit <Int32>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [-IncludeTotalCount] [-Skip <UInt64>] [-First <UInt64>] [<CommonParameters>]
 ```
