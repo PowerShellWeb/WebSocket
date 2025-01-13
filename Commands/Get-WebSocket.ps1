@@ -248,6 +248,10 @@ function Get-WebSocket {
     [long]
     $Maximum,
 
+    # The throttle limit used when creating background jobs.
+    [int]
+    $ThrottleLimit = 64,
+
     # The maximum time to wait for a connection to be established.
     # By default, this is 7 seconds.
     [TimeSpan]
@@ -274,12 +278,12 @@ function Get-WebSocket {
                 [Collections.IDictionary]$Variable
             )
             
+            $Variable.JobRunspace = [Runspace]::DefaultRunspace
+
             # Take every every `-Variable` passed in and define it within the job
             foreach ($keyValue in $variable.GetEnumerator()) {
                 $ExecutionContext.SessionState.PSVariable.Set($keyValue.Key, $keyValue.Value)
-            }
-
-            $Variable.JobRunspace = [Runspace]::DefaultRunspace
+            }            
 
             if ((-not $WebSocketUri)) {
                 throw "No WebSocketUri"
@@ -384,8 +388,7 @@ function Get-WebSocket {
                                     $SkipCount++
                                     continue WebSocketMessageLoop
                                 }
-                                
-                                
+                                                                
                                 $MessageObject                                
                                 if ($First -and ($MessageCount - $FilteredCount - $SkipCount) -ge $First) {
                                     $Maximum = $first
@@ -444,7 +447,7 @@ function Get-WebSocket {
                 $ExecutionContext.SessionState.PSVariable.Set($keyValue.Key, $keyValue.Value)
             }
 
-            $Variable.JobRunspace = [Runspace]::DefaultRunspace
+            $Variable['JobRunspace'] = [Runspace]::DefaultRunspace
 
             # If we have routes, we will cache all of their possible parameters now
             if ($route.Count) {
@@ -485,6 +488,7 @@ function Get-WebSocket {
             
             # If the listener isn't listening, start it.
             if (-not $httpListener.IsListening) { $httpListener.Start() }
+            $httpListener.psobject.properties.add([psnoteproperty]::new('JobVariable',$Variable), $true)
         
             # While the listener is listening,
             while ($httpListener.IsListening) {
@@ -738,6 +742,10 @@ function Get-WebSocket {
         }
         
         $Variable['MainRunspace'] = [Runspace]::DefaultRunspace
+        $StartThreadJobSplat = [Ordered]@{
+            InitializationScript = $InitializationScript
+            ThrottleLimit = $ThrottleLimit
+        }
 
         # If we're going to be listening for HTTP requests, run a thread job for the server.        
         if ($RootUrl) {
@@ -776,11 +784,17 @@ function Get-WebSocket {
                     $httpListenerJob = $existingJob
                     $httpListener = $existingJob.HttpListener
                 } else {
-                    $httpListenerJob = Start-ThreadJob -ScriptBlock $SocketServerJob -Name "$RootUrl" -InitializationScript $InitializationScript -ArgumentList $Variable
-                }                
+                    $httpListenerJob = Start-ThreadJob -ScriptBlock $SocketServerJob -Name "$RootUrl" -ArgumentList $Variable @StartThreadJobSplat
+                }
             }
             
+            # If we have a listener job
             if ($httpListenerJob) {
+                # and the job has not started
+                if ($httpListenerJob.JobStateInfo.State -eq 'NotStarted') {
+                    # sleep for no time (this will allow the job to start)
+                    Start-Sleep -Milliseconds 0 
+                }                
                 foreach ($keyValuePair in $Variable.GetEnumerator()) {
                     $httpListenerJob.psobject.properties.add(
                         [psnoteproperty]::new($keyValuePair.Key, $keyValuePair.Value), $true
@@ -841,8 +855,8 @@ function Get-WebSocket {
                 if ($existingJob -and -not $Force) {
                     $existingJob
                 } else {
-                    Start-ThreadJob -ScriptBlock $SocketClientJob -Name $Name -InitializationScript $InitializationScript -ArgumentList $Variable
-                }                                            
+                    Start-ThreadJob -ScriptBlock $SocketClientJob -Name $Name -ArgumentList $Variable @StartThreadJobSplat
+                }
             }
 
         $subscriptionSplat = @{
