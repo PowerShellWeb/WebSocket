@@ -10,7 +10,7 @@ function Get-WebSocket {
         If the `-Watch` parameter is provided, will output a continous stream of objects.
     .EXAMPLE
         # Create a WebSocket job that connects to a WebSocket and outputs the results.
-        Get-WebSocket -WebSocketUri "wss://localhost:9669/" 
+        Get-WebSocket -SocketUrl "wss://localhost:9669/" 
     .EXAMPLE
         # Get is the default verb, so we can just say WebSocket.
         # `-Watch` will output a continous stream of objects from the websocket.
@@ -106,36 +106,41 @@ function Get-WebSocket {
             Sort Count -Descending |
             Select -First 10
     #>
-    [CmdletBinding(PositionalBinding=$false,SupportsPaging)]
+    [CmdletBinding(
+        PositionalBinding=$false,
+        SupportsPaging,
+        DefaultParameterSetName='WebSocketClient'
+    )]
     [Alias('WebSocket','ws','wss')]
     param(
     # The WebSocket Uri.
-    [Parameter(Position=0,ValueFromPipelineByPropertyName)]
-    [Alias('Url','Uri','WebSocketUrl')]
+    [Parameter(Position=0,ParameterSetName='WebSocketClient',ValueFromPipelineByPropertyName)]
+    [Alias('Url','Uri','WebSocketUri','WebSocketUrl')]
     [uri]
-    $WebSocketUri,
+    $SocketUrl,
 
     # One or more root urls.
     # If these are provided, a WebSocket server will be created with these listener prefixes.
-    [Parameter(Position=1,ValueFromPipelineByPropertyName)]
-    [Alias('HostHeader','Host','CNAME','ServerURL','ListenerPrefix','ListenerPrefixes','ListenerUrl')]
+    [Parameter(Mandatory,Position=0,ValueFromPipelineByPropertyName,ParameterSetName='WebSocketServer')]
+    [Alias('HostHeader','Host','CNAME','ListenerPrefix','ListenerPrefixes','ListenerUrl')]
     [string[]]
     $RootUrl,
 
     # A route table for all requests.
-    [Parameter(ValueFromPipelineByPropertyName)]
+    [Parameter(ValueFromPipelineByPropertyName,ParameterSetName='WebSocketServer')]
     [Alias('Routes','RouteTable','WebHook','WebHooks')]
     [Collections.IDictionary]
     $Route,
 
     # The Default HTML.
     # This will be displayed when visiting the root url.
-    [Parameter(ValueFromPipelineByPropertyName)]
+    [Parameter(ValueFromPipelineByPropertyName,ParameterSetName='WebSocketServer')]
     [Alias('DefaultHTML','Home','Index','IndexHTML','DefaultPage')]
     [string]
     $HTML,
 
     # The name of the palette to use.  This will include the [4bitcss](https://4bitcss.com) stylesheet.
+    [Parameter(ValueFromPipelineByPropertyName,ParameterSetName='WebSocketServer')]
     [Alias('Palette','ColorScheme','ColorPalette')]
     [ArgumentCompleter({
         param ($commandName,$parameterName,$wordToComplete,$commandAst,$fakeBoundParameters )
@@ -152,35 +157,37 @@ function Get-WebSocket {
     $PaletteName,
 
     # The [Google Font](https://fonts.google.com/) name.
-    [Parameter(ValueFromPipelineByPropertyName)]
+    [Parameter(ValueFromPipelineByPropertyName,ParameterSetName='WebSocketServer')]
     [Alias('FontName')]
     [string]
     $GoogleFont,
 
     # The Google Font name to use for code blocks.
     # (this should be a [monospace font](https://fonts.google.com/?classification=Monospace))
-    [Parameter(ValueFromPipelineByPropertyName)]
+    [Parameter(ValueFromPipelineByPropertyName,ParameterSetName='WebSocketServer')]
     [Alias('PreFont','CodeFontName','PreFontName')]
     [string]
     $CodeFont,
 
     # A list of javascript files or urls to include in the content.
-    [Parameter(ValueFromPipelineByPropertyName)]
+    [Parameter(ValueFromPipelineByPropertyName,ParameterSetName='WebSocketServer')]
     [string[]]
     $JavaScript,
 
     # A javascript import map.  This allows you to import javascript modules.
-    [Parameter(ValueFromPipelineByPropertyName)]
+    [Parameter(ValueFromPipelineByPropertyName,ParameterSetName='WebSocketServer')]
     [Alias('ImportsJavaScript','JavaScriptImports','JavaScriptImportMap')]
     [Collections.IDictionary]
     $ImportMap,
 
     # A collection of query parameters.
-    # These will be appended onto the `-WebSocketUri`.
+    # These will be appended onto the `-SocketUrl`.
+    [Parameter(ValueFromPipelineByPropertyName,ParameterSetName='WebSocketClient')]
     [Collections.IDictionary]
     $QueryParameter,
 
     # A ScriptBlock that will handle the output of the WebSocket.
+    [Parameter(ParameterSetName='WebSocketServer')]
     [ScriptBlock]
     $Handler,
 
@@ -206,32 +213,39 @@ function Get-WebSocket {
 
     # The ScriptBlock to run after connection to a websocket.
     # This can be useful for making any initial requests.
+    [Parameter(ParameterSetName='WebSocketClient')]
     [ScriptBlock]
     $OnConnect,
 
     # The ScriptBlock to run when an error occurs.
+    [Parameter(ParameterSetName='WebSocketClient')]
     [ScriptBlock]
     $OnError,
 
     # The ScriptBlock to run when the WebSocket job outputs an object.
+    [Parameter(ParameterSetName='WebSocketClient')]
     [ScriptBlock]
     $OnOutput,
 
     # The Scriptblock to run when the WebSocket job produces a warning.
+    [Parameter(ParameterSetName='WebSocketClient')]
     [ScriptBlock]
     $OnWarning,
 
     # If set, will watch the output of the WebSocket job, outputting results continuously instead of outputting a websocket job.    
+    [Parameter(ParameterSetName='WebSocketClient')]
     [Alias('Tail')]
     [switch]
     $Watch,
 
     # If set, will output the raw text that comes out of the WebSocket.
+    [Parameter(ParameterSetName='WebSocketClient')]
     [Alias('Raw')]
     [switch]
     $RawText,    
 
     # If set, will output the raw bytes that come out of the WebSocket.
+    [Parameter(ParameterSetName='WebSocketClient')]
     [Alias('RawByte','RawBytes','Bytes','Byte')]
     [switch]
     $Binary,    
@@ -241,6 +255,7 @@ function Get-WebSocket {
     $Force,
 
     # The subprotocol used by the websocket.  If not provided, this will default to `json`.
+    [Parameter(ValueFromPipelineByPropertyName,ParameterSetName='WebSocketClient')]
     [string]
     $SubProtocol,
     
@@ -249,12 +264,14 @@ function Get-WebSocket {
     # If they are strings or regexes, they will be applied to the raw text.
     # If they are scriptblocks, they will be applied to the deserialized JSON.
     # These filters will be run within the WebSocket job.
+    [Parameter(ValueFromPipelineByPropertyName,ParameterSetName='WebSocketClient')]
     [PSObject[]]
     $Filter,
 
     # If set, will watch the output of a WebSocket job for one or more conditions.
     # The conditions are the keys of the dictionary, and can be a regex, a string, or a scriptblock.
     # The values of the dictionary are what will happen when a match is found.
+    [Parameter(ValueFromPipelineByPropertyName,ParameterSetName='WebSocketClient')]
     [ValidateScript({
         $keys = $_.Keys
         $values = $_.values
@@ -280,6 +297,7 @@ function Get-WebSocket {
 
     # If provided, will decorate the objects outputted from a websocket job.
     # This will only decorate objects converted from JSON.
+    [Parameter(ValueFromPipelineByPropertyName,ParameterSetName='WebSocketClient')]
     [Alias('PSTypeNames','Decorate','Decoration')]
     [string[]]
     $PSTypeName,
@@ -293,17 +311,20 @@ function Get-WebSocket {
     $ThrottleLimit = 64,
 
     # The maximum time to wait for a connection to be established.
-    # By default, this is 7 seconds.
+    # By default, this is 7 seconds.    
+    [Parameter(ValueFromPipelineByPropertyName,ParameterSetName='WebSocketClient')]
     [TimeSpan]
     $ConnectionTimeout = '00:00:07',
 
     # The Runspace where the handler should run.
     # Runspaces allow you to limit the scope of the handler.
+    [Parameter(ValueFromPipelineByPropertyName,ParameterSetName='WebSocketClient')]
     [Runspace]
     $Runspace,
 
     # The RunspacePool where the handler should run.
     # RunspacePools allow you to limit the scope of the handler to a pool of runspaces.
+    [Parameter(ValueFromPipelineByPropertyName,ParameterSetName='WebSocketClient')]
     [Management.Automation.Runspaces.RunspacePool]
     [Alias('Pool')]
     $RunspacePool
@@ -325,16 +346,18 @@ function Get-WebSocket {
                 $ExecutionContext.SessionState.PSVariable.Set($keyValue.Key, $keyValue.Value)
             }            
 
-            if ((-not $WebSocketUri)) {
-                throw "No WebSocketUri"
+            if ((-not $SocketUrl)) {
+                throw "No SocketUrl"
             }
 
-            if (-not $WebSocketUri.Scheme) {
-                $WebSocketUri = [uri]"wss://$WebSocketUri"
+            if (-not $SocketUrl.Scheme) {
+                $SocketUrl = [uri]"wss://$SocketUrl"
+            } elseif ($SocketUrl.Scheme -match '^https?') {
+                $SocketUrl = $SocketUrl -replace '^http', 'ws'
             }
             
             if ($QueryParameter) {
-                $WebSocketUri = [uri]"$($webSocketUri)$($WebSocketUri.Query ? '&' : '?')$(@(
+                $SocketUrl = [uri]"$($SocketUrl)$($SocketUrl.Query ? '&' : '?')$(@(
                     foreach ($keyValuePair in $QueryParameter.GetEnumerator()) {
                         if ($keyValuePair.Value -is [Collections.IList]) {
                             foreach ($value in $keyValuePair.Value) {
@@ -359,7 +382,7 @@ function Get-WebSocket {
                 } else {
                     $ws.Options.AddSubProtocol('json')
                 }
-                $null = $ws.ConnectAsync($WebSocketUri, $CT).Wait()
+                $null = $ws.ConnectAsync($SocketUrl, $CT).Wait()
             } else {
                 $ws = $WebSocket
             }            
@@ -850,7 +873,7 @@ function Get-WebSocket {
     }
 
     process {        
-        if ((-not $WebSocketUri) -and (-not $RootUrl)) {
+        if ((-not $SocketUrl) -and (-not $RootUrl)) {
             $socketAndListenerJobs =
                 foreach ($job in Get-Job) {
                     if (
@@ -966,9 +989,9 @@ function Get-WebSocket {
             return
         }
         $webSocketJob =
-            if ($WebSocketUri) {
+            if ($SocketUrl) {
                 if (-not $name) {
-                    $Name = $WebSocketUri
+                    $Name = $SocketUrl
                 }
 
                 $existingJob = foreach ($jobWithThisName in (Get-Job -Name $Name -ErrorAction Ignore)) {
