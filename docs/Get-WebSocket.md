@@ -176,6 +176,42 @@ This will be displayed when visiting the root url.
 |----------|--------|--------|---------------------|------------------------------------------------------------|
 |`[String]`|false   |named   |true (ByPropertyName)|DefaultHTML<br/>Home<br/>Index<br/>IndexHTML<br/>DefaultPage|
 
+#### **PaletteName**
+The name of the palette to use.  This will include the [4bitcss](https://4bitcss.com) stylesheet.
+
+|Type      |Required|Position|PipelineInput|Aliases                                 |
+|----------|--------|--------|-------------|----------------------------------------|
+|`[String]`|false   |named   |false        |Palette<br/>ColorScheme<br/>ColorPalette|
+
+#### **GoogleFont**
+The [Google Font](https://fonts.google.com/) name.
+
+|Type      |Required|Position|PipelineInput        |Aliases |
+|----------|--------|--------|---------------------|--------|
+|`[String]`|false   |named   |true (ByPropertyName)|FontName|
+
+#### **CodeFont**
+The Google Font name to use for code blocks.
+(this should be a [monospace font](https://fonts.google.com/?classification=Monospace))
+
+|Type      |Required|Position|PipelineInput        |Aliases                                 |
+|----------|--------|--------|---------------------|----------------------------------------|
+|`[String]`|false   |named   |true (ByPropertyName)|PreFont<br/>CodeFontName<br/>PreFontName|
+
+#### **JavaScript**
+A list of javascript files or urls to include in the content.
+
+|Type        |Required|Position|PipelineInput        |
+|------------|--------|--------|---------------------|
+|`[String[]]`|false   |named   |true (ByPropertyName)|
+
+#### **ImportMap**
+A javascript import map.  This allows you to import javascript modules.
+
+|Type           |Required|Position|PipelineInput        |Aliases                                                        |
+|---------------|--------|--------|---------------------|---------------------------------------------------------------|
+|`[IDictionary]`|false   |named   |true (ByPropertyName)|ImportsJavaScript<br/>JavaScriptImports<br/>JavaScriptImportMap|
+
 #### **QueryParameter**
 A collection of query parameters.
 These will be appended onto the `-WebSocketUri`.
@@ -385,5 +421,5 @@ RunspacePools allow you to limit the scope of the handler to a pool of runspaces
 
 ### Syntax
 ```PowerShell
-Get-WebSocket [[-WebSocketUri] <Uri>] [[-RootUrl] <String[]>] [-Route <IDictionary>] [-HTML <String>] [-QueryParameter <IDictionary>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-Broadcast <PSObject>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-RawText] [-Binary] [-Force] [-SubProtocol <String>] [-Filter <PSObject[]>] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-PSTypeName <String[]>] [-Maximum <Int64>] [-ThrottleLimit <Int32>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [-IncludeTotalCount] [-Skip <UInt64>] [-First <UInt64>] [<CommonParameters>]
+Get-WebSocket [[-WebSocketUri] <Uri>] [[-RootUrl] <String[]>] [-Route <IDictionary>] [-HTML <String>] [-PaletteName <String>] [-GoogleFont <String>] [-CodeFont <String>] [-JavaScript <String[]>] [-ImportMap <IDictionary>] [-QueryParameter <IDictionary>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-Broadcast <PSObject>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-RawText] [-Binary] [-Force] [-SubProtocol <String>] [-Filter <PSObject[]>] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-PSTypeName <String[]>] [-Maximum <Int64>] [-ThrottleLimit <Int32>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [-IncludeTotalCount] [-Skip <UInt64>] [-First <UInt64>] [<CommonParameters>]
 ```
