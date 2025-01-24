@@ -135,6 +135,46 @@ function Get-WebSocket {
     [string]
     $HTML,
 
+    # The name of the palette to use.  This will include the [4bitcss](https://4bitcss.com) stylesheet.
+    [Alias('Palette','ColorScheme','ColorPalette')]
+    [ArgumentCompleter({
+        param ($commandName,$parameterName,$wordToComplete,$commandAst,$fakeBoundParameters )
+        if (-not $script:4bitcssPaletteList) {
+            $script:4bitcssPaletteList = Invoke-RestMethod -Uri https://cdn.jsdelivr.net/gh/2bitdesigns/4bitcss@latest/docs/Palette-List.json
+        }
+        if ($wordToComplete) {
+            $script:4bitcssPaletteList -match "$([Regex]::Escape($wordToComplete) -replace '\\\*', '.{0,}')"
+        } else {
+            $script:4bitcssPaletteList 
+        }        
+    })]
+    [string]
+    $PaletteName,
+
+    # The [Google Font](https://fonts.google.com/) name.
+    [Parameter(ValueFromPipelineByPropertyName)]
+    [Alias('FontName')]
+    [string]
+    $GoogleFont,
+
+    # The Google Font name to use for code blocks.
+    # (this should be a [monospace font](https://fonts.google.com/?classification=Monospace))
+    [Parameter(ValueFromPipelineByPropertyName)]
+    [Alias('PreFont','CodeFontName','PreFontName')]
+    [string]
+    $CodeFont,
+
+    # A list of javascript files or urls to include in the content.
+    [Parameter(ValueFromPipelineByPropertyName)]
+    [string[]]
+    $JavaScript,
+
+    # A javascript import map.  This allows you to import javascript modules.
+    [Parameter(ValueFromPipelineByPropertyName)]
+    [Alias('ImportsJavaScript','JavaScriptImports','JavaScriptImportMap')]
+    [Collections.IDictionary]
+    $ImportMap,
+
     # A collection of query parameters.
     # These will be appended onto the `-WebSocketUri`.
     [Collections.IDictionary]
@@ -488,6 +528,63 @@ function Get-WebSocket {
             
             # If the listener isn't listening, start it.
             if (-not $httpListener.IsListening) { $httpListener.Start() }
+
+            $variable['SiteHeader'] = $siteHeader =  @(
+            
+                if ($Javascript) {
+                    # as well as any javascript files provided.
+                    foreach ($js in $Javascript) {
+                        if ($js -match '.js$') {
+                            "<script src='$javascript'></script>"
+                        } else {
+                            "<script type='text/javascript'>$js</script>"
+                        }
+                    }
+                }
+                    
+                # If an import map was provided, we will include it.
+                if ($ImportMap) {                
+                    $variable['ImportMap'] = @(
+                        "<script type='importmap'>"
+                        [Ordered]@{
+                            imports = $ImportMap
+                        } | ConvertTo-Json -Depth 3
+                        "</script>"
+                    ) -join [Environment]::NewLine                
+                }
+
+                # If a palette name was provided, we will include the 4bitcss stylesheet.
+                if ($PaletteName) {
+                    if ($PaletteName -match '/.+?\.css$') {
+                        "<link type='text/css' rel='stylesheet' href='$PaletteName' id='4bitcss' />"
+
+                    } else {
+                        '<link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/gh/2bitdesigns/4bitcss@latest/css/.css" id="4bitcss" />' -replace '\.css', "$PaletteName.css"
+                    }            
+                }
+                
+                # If a font name was provided, we will include the font stylesheet.
+                if ($GoogleFont) {
+                    "<link type='text/css' rel='stylesheet' href='https://fonts.googleapis.com/css?family=$GoogleFont' id='fontname' />"
+                    "<style type='text/css'>body { font-family: '$GoogleFont'; }</style>"
+                }
+
+                # If a code font was provided, we will include the code font stylesheet.
+                if ($CodeFont) {
+                    "<link type='text/css' rel='stylesheet' href='https://fonts.googleapis.com/css?family=$CodeFont' id='codefont' />"
+                    "<style type='text/css'>pre, code { font-family: '$CodeFont'; }</style>"
+                }
+                                
+                # and if any stylesheets were provided, we will include them.            
+                foreach ($css in $variable.StyleSheet) {
+                    if ($css -match '.css$') {
+                        "<link rel='stylesheet' href='$css' />"
+                    } else {
+                        "<style type='text/css'>$css</style>"
+                    }
+                }                            
+            )
+
             $httpListener.psobject.properties.add([psnoteproperty]::new('JobVariable',$Variable), $true)
         
             # While the listener is listening,
@@ -497,6 +594,24 @@ function Get-WebSocket {
                 # and wait for it to complete.
                 while (-not ($contextAsync.IsCompleted -or $contextAsync.IsFaulted -or $contextAsync.IsCanceled)) {
                     # while this is going on, other events can be processed, and CTRL-C can exit.
+                    # also, we can go ahead and check for any socket requests, and get ready for the next one if we find one.
+                    foreach ($socketRequest in @($httpListener.SocketRequests.GetEnumerator())) {
+                        if ($socketRequest.Value.Receiving.IsCompleted) {
+                            $socketRequest.Value.MessageCount++
+                            $jsonMessage = ConvertFrom-Json -InputObject ($OutputEncoding.GetString($socketRequest.Value.ClientBuffer -gt 0))
+                            $socketRequest.Value.ClientBuffer.Clear()
+                            if ($MainRunspace.Events.GenerateEvent) {
+                                $MainRunspace.Events.GenerateEvent.Invoke(@(
+                                    "$($request.Url.Scheme -replace '^http', 'ws')://",
+                                    $httpListener,
+                                    @($socketRequest.Value.Context, $socketRequest.Value.WebSocketContet, $socketRequest.Key, $socketRequest.Value),
+                                    $jsonMessage
+                                ))
+                            }
+                            $socketRequest.Value.Receiving = 
+                                $socketRequest.Value.WebSocket.ReceiveAsync($socketRequest.Value.ClientBuffer, [Threading.CancellationToken]::None)
+                        }
+                    }
                 }
                 # If async method fails,
                 if ($contextAsync.IsFaulted) {
@@ -553,7 +668,18 @@ function Get-WebSocket {
                         $Protocol = $requestedUrl.Scheme -replace '^http', 'ws'
 
                         # Now add the result it to the SocketRequests lookup table, using the request trace identifier as the key.
-                        $httpListener.SocketRequests[$context.Request.RequestTraceIdentifier] = $webSocketResult
+                        $clientBuffer = $webSocketResult.WebSocket::CreateClientBuffer($BufferSize, $BufferSize)
+                        $httpListener.SocketRequests[$context.Request.RequestTraceIdentifier] = [Ordered]@{
+                            Context = $context
+                            WebSocketContext = $webSocketResult
+                            WebSocket = $webSocketResult.WebSocket
+                            ClientBuffer = $clientBuffer
+                            Created = [DateTime]::UtcNow 
+                            LastMessageTime = $null
+                            Receiving = $webSocketResult.WebSocket.ReceiveAsync($clientBuffer, [Threading.CancellationToken]::None)
+                            MessageQueue = [Collections.Queue]::new()
+                            MessageCount = [long]0
+                        }
                         # and add the websocketcontext result to the message data.
                         $messageData["WebSocketContext"] = $webSocketResult
                         # also add the websocket result to the message data,
@@ -612,7 +738,7 @@ function Get-WebSocket {
                                 "<html>"
                                 "<head>"
                                 # and apply the site header.
-                                $SiteHeader
+                                $SiteHeader -join [Environment]::NewLine
                                 "</head>"
                                 "<body>"
                                 $html
@@ -742,6 +868,9 @@ function Get-WebSocket {
         }
         
         $Variable['MainRunspace'] = [Runspace]::DefaultRunspace
+        if (-not $variable['BufferSize']) {
+            $variable['BufferSize'] = $BufferSize
+        }
         $StartThreadJobSplat = [Ordered]@{
             InitializationScript = $InitializationScript
             ThrottleLimit = $ThrottleLimit
