@@ -161,7 +161,7 @@ If these are provided, a WebSocket server will be created with these listener pr
 
 |Type        |Required|Position|PipelineInput        |Aliases                                                                              |
 |------------|--------|--------|---------------------|-------------------------------------------------------------------------------------|
-|`[String[]]`|true    |1       |true (ByPropertyName)|HostHeader<br/>Host<br/>CNAME<br/>ListenerPrefix<br/>ListenerPrefixes<br/>ListenerUrl|
+|`[String[]]`|true    |named   |true (ByPropertyName)|HostHeader<br/>Host<br/>CNAME<br/>ListenerPrefix<br/>ListenerPrefixes<br/>ListenerUrl|
 
 #### **Route**
 A route table for all requests.
@@ -452,5 +452,5 @@ RunspacePools allow you to limit the scope of the handler to a pool of runspaces
 Get-WebSocket [[-SocketUrl] <Uri>] [-QueryParameter <IDictionary>] [-ForwardEvent] [-Variable <IDictionary>] [-Header <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-Broadcast <PSObject>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Authenticate <PSObject>] [-Watch] [-RawText] [-Binary] [-Force] [-SubProtocol <String>] [-Filter <PSObject[]>] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-PSTypeName <String[]>] [-Maximum <Int64>] [-ThrottleLimit <Int32>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [-IncludeTotalCount] [-Skip <UInt64>] [-First <UInt64>] [<CommonParameters>]
 ```
 ```PowerShell
-Get-WebSocket [-RootUrl] <String[]> [-Route <IDictionary>] [-HTML <String>] [-PaletteName <String>] [-GoogleFont <String>] [-CodeFont <String>] [-JavaScript <String[]>] [-ImportMap <IDictionary>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Header <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-Broadcast <PSObject>] [-Force] [-TimeOut <TimeSpan>] [-Maximum <Int64>] [-ThrottleLimit <Int32>] [-IncludeTotalCount] [-Skip <UInt64>] [-First <UInt64>] [<CommonParameters>]
+Get-WebSocket -RootUrl <String[]> [-Route <IDictionary>] [-HTML <String>] [-PaletteName <String>] [-GoogleFont <String>] [-CodeFont <String>] [-JavaScript <String[]>] [-ImportMap <IDictionary>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Header <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-Broadcast <PSObject>] [-Force] [-TimeOut <TimeSpan>] [-Maximum <Int64>] [-ThrottleLimit <Int32>] [-IncludeTotalCount] [-Skip <UInt64>] [-First <UInt64>] [<CommonParameters>]
 ```
