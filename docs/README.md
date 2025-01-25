@@ -122,11 +122,13 @@ websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.
 
 ~~~powershell
 # BlueSky, but just the hashtags
-websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{
+websocket wss://jetstream2.us-west.bsky.network/subscribe -QueryParameter @{
+    wantedCollections = 'app.bsky.feed.post'
+} -WatchFor @{
     {$webSocketoutput.commit.record.text -match "\#\w+"}={
         $matches.0
     }                
-}
+} -Maximum 1kb
 ~~~
  #### Get-WebSocket Example 10
 
