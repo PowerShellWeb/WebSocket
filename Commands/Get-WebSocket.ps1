@@ -62,11 +62,13 @@ function Get-WebSocket {
             }
     .EXAMPLE
         # BlueSky, but just the hashtags
-        websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{
+        websocket wss://jetstream2.us-west.bsky.network/subscribe -QueryParameter @{
+            wantedCollections = 'app.bsky.feed.post'
+        } -WatchFor @{
             {$webSocketoutput.commit.record.text -match "\#\w+"}={
                 $matches.0
             }                
-        }
+        } -Maximum 1kb
     .EXAMPLE
         # BlueSky, but just the hashtags (as links)
         websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{
@@ -190,6 +192,13 @@ function Get-WebSocket {
     [Parameter(ParameterSetName='WebSocketServer')]
     [ScriptBlock]
     $Handler,
+
+    # If set, will forward websocket messages as events.
+    # Only events that match -Filter will be forwarded.
+    [Parameter(ValueFromPipelineByPropertyName,ParameterSetName='WebSocketClient')]
+    [Alias('Forward')]
+    [switch]
+    $ForwardEvent,
 
     # Any variables to declare in the WebSocket job.
     # These variables will also be added to the job as properties.
@@ -434,7 +443,7 @@ function Get-WebSocket {
                             if ($RawText) {
                                 $messageString
                             } else {
-                                $MessageObject = ConvertFrom-Json -InputObject $messageString
+                                $MessageObject = ConvertFrom-Json -InputObject $messageString                                
                                 if ($filter) {
                                     foreach ($fil in $Filter) {
                                         if ($fil -is [ScriptBlock] -or 
@@ -452,7 +461,19 @@ function Get-WebSocket {
                                     continue WebSocketMessageLoop
                                 }
                                                                 
-                                $MessageObject                                
+                                $MessageObject
+
+                                # If we are forwarding events
+                                if ($ForwardEvent -and $MainRunspace.Events.GenerateEvent) {
+                                    # generate an event in the main runspace
+                                    $null = $MainRunspace.Events.GenerateEvent(
+                                        "$SocketUrl",
+                                        $ws,
+                                        @($MessageObject),
+                                        $MessageObject
+                                    )
+                                }
+
                                 if ($First -and ($MessageCount - $FilteredCount - $SkipCount) -ge $First) {
                                     $Maximum = $first
                                 }
