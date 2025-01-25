@@ -246,6 +246,16 @@ function Get-WebSocket {
     [ScriptBlock]
     $OnWarning,
 
+    # If provided, will authenticate the WebSocket.
+    # Many websockets require an initial authentication handshake
+    # after an initial message is received.    
+    # This parameter can be either a ScriptBlock or any other object.
+    # If it is a ScriptBlock, it will be run with the output of the WebSocket passed as the first argument.
+    [Parameter(ParameterSetName='WebSocketClient')]
+    [Alias('Authorize','Identify')]
+    [PSObject]
+    $Authenticate,
+
     # If set, will watch the output of the WebSocket job, outputting results continuously instead of outputting a websocket job.    
     [Parameter(ParameterSetName='WebSocketClient')]
     [Alias('Tail')]
@@ -256,7 +266,7 @@ function Get-WebSocket {
     [Parameter(ParameterSetName='WebSocketClient')]
     [Alias('Raw')]
     [switch]
-    $RawText,    
+    $RawText,
 
     # If set, will output the raw bytes that come out of the WebSocket.
     [Parameter(ParameterSetName='WebSocketClient')]
@@ -466,6 +476,25 @@ function Get-WebSocket {
                                         }
                                     }
                                 }
+
+                                if ($Authenticate) {
+                                    # a number of websockets require some handshaking to authenticate
+                                    $authenticationMessage =                                        
+                                        if ($Authenticate -is [ScriptBlock]) {
+                                            & $Authenticate $MessageObject
+                                        } else {
+                                            $authenticate
+                                        }
+
+                                    if ($authenticationMessage) {
+                                        if ($authenticationMessage -isnot [string]) {
+                                            $ws.SendAsync([ArraySegment[byte]]::new(
+                                                $OutputEncoding.GetBytes((ConvertTo-Json -InputObject $authenticationMessage -Depth 10))
+                                            ), 'Text', $true, $CT)                                            
+                                        }
+                                    }
+                                }
+
                                 if ($Skip -and ($SkipCount -le $Skip)) {
                                     $SkipCount++
                                     continue WebSocketMessageLoop
@@ -482,7 +511,7 @@ function Get-WebSocket {
                                         @($MessageObject),
                                         $MessageObject
                                     )
-                                }
+                                }                                
 
                                 if ($First -and ($MessageCount - $FilteredCount - $SkipCount) -ge $First) {
                                     $Maximum = $first
