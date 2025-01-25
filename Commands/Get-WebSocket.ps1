@@ -18,7 +18,7 @@ function Get-WebSocket {
         websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch |
             % { 
                 $_.commit.record.text
-            }            
+            }
     .EXAMPLE
         # Watch BlueSky, but just the text and spacing
         $blueSkySocketUrl = "wss://jetstream2.us-$(
@@ -202,8 +202,13 @@ function Get-WebSocket {
 
     # Any variables to declare in the WebSocket job.
     # These variables will also be added to the job as properties.
-    [Collections.IDictionary]
+    [Collections.IDictionary]    
     $Variable = @{},
+
+    # Any Http Headers to include in the WebSocket request or server response.
+    [Collections.IDictionary]
+    [Alias('Headers')]
+    $Header,
 
     # The name of the WebSocket job.
     [string]
@@ -390,6 +395,11 @@ function Get-WebSocket {
                     $ws.Options.AddSubProtocol($SubProtocol)
                 } else {
                     $ws.Options.AddSubProtocol('json')
+                }
+                if ($Header) {
+                    foreach ($headerKeyValue in $header.GetEnumerator()) {
+                        $ws.Options.SetRequestHeader($headerKeyValue.Key, $headerKeyValue.Value)
+                    }                    
                 }
                 $null = $ws.ConnectAsync($SocketUrl, $CT).Wait()
             } else {
@@ -687,6 +697,16 @@ function Get-WebSocket {
                 $eventIdentifier = "$($Protocol)://"
                 # and by default it will pass a message containing the context.                                
                 $messageData = [Ordered]@{Protocol = $protocol; Url = $context.Request.Url;Context = $context}
+
+                if ($Header -and $response) {
+                    foreach ($headerKeyValue in $Header.GetEnumerator()) {
+                        try {
+                            $response.Headers.Add($headerKeyValue.Key, $headerKeyValue.Value)
+                        } catch {
+                            Write-Warning "Cannot add header '$($headerKeyValue.Key)': $_"
+                        }                        
+                    }
+                }
 
                 # HttpListeners are quite nice, especially when it comes to websocket upgrades.
                 # If the request is a websocket request
