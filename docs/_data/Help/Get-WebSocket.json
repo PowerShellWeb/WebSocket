@@ -33,7 +33,7 @@
     {
       "Title": "EXAMPLE 1",
       "Markdown": "Create a WebSocket job that connects to a WebSocket and outputs the results.",
-      "Code": "Get-WebSocket -WebSocketUri \"wss://localhost:9669/\""
+      "Code": "Get-WebSocket -SocketUrl \"wss://localhost:9669/\""
     },
     {
       "Title": "EXAMPLE 2",

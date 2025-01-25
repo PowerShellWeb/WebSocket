@@ -46,7 +46,7 @@ To stop watching a websocket, simply stop the background job.
 
 ~~~powershell
 # Create a WebSocket job that connects to a WebSocket and outputs the results.
-Get-WebSocket -WebSocketUri "wss://localhost:9669/"
+Get-WebSocket -SocketUrl "wss://localhost:9669/"
 ~~~
  #### Get-WebSocket Example 2
 

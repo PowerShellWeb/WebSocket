@@ -20,7 +20,7 @@ If the `-Watch` parameter is provided, will output a continous stream of objects
 Create a WebSocket job that connects to a WebSocket and outputs the results.
 
 ```PowerShell
-Get-WebSocket -WebSocketUri "wss://localhost:9669/"
+Get-WebSocket -SocketUrl "wss://localhost:9669/"
 ```
 Get is the default verb, so we can just say WebSocket.
 `-Watch` will output a continous stream of objects from the websocket.
@@ -146,20 +146,20 @@ $somePosts |
 ---
 
 ### Parameters
-#### **WebSocketUri**
+#### **SocketUrl**
 The WebSocket Uri.
 
-|Type   |Required|Position|PipelineInput        |Aliases                     |
-|-------|--------|--------|---------------------|----------------------------|
-|`[Uri]`|false   |1       |true (ByPropertyName)|Url<br/>Uri<br/>WebSocketUrl|
+|Type   |Required|Position|PipelineInput        |Aliases                                      |
+|-------|--------|--------|---------------------|---------------------------------------------|
+|`[Uri]`|false   |1       |true (ByPropertyName)|Url<br/>Uri<br/>WebSocketUri<br/>WebSocketUrl|
 
 #### **RootUrl**
 One or more root urls.
 If these are provided, a WebSocket server will be created with these listener prefixes.
 
-|Type        |Required|Position|PipelineInput        |Aliases                                                                                            |
-|------------|--------|--------|---------------------|---------------------------------------------------------------------------------------------------|
-|`[String[]]`|false   |2       |true (ByPropertyName)|HostHeader<br/>Host<br/>CNAME<br/>ServerURL<br/>ListenerPrefix<br/>ListenerPrefixes<br/>ListenerUrl|
+|Type        |Required|Position|PipelineInput        |Aliases                                                                              |
+|------------|--------|--------|---------------------|-------------------------------------------------------------------------------------|
+|`[String[]]`|true    |1       |true (ByPropertyName)|HostHeader<br/>Host<br/>CNAME<br/>ListenerPrefix<br/>ListenerPrefixes<br/>ListenerUrl|
 
 #### **Route**
 A route table for all requests.
@@ -179,9 +179,9 @@ This will be displayed when visiting the root url.
 #### **PaletteName**
 The name of the palette to use.  This will include the [4bitcss](https://4bitcss.com) stylesheet.
 
-|Type      |Required|Position|PipelineInput|Aliases                                 |
-|----------|--------|--------|-------------|----------------------------------------|
-|`[String]`|false   |named   |false        |Palette<br/>ColorScheme<br/>ColorPalette|
+|Type      |Required|Position|PipelineInput        |Aliases                                 |
+|----------|--------|--------|---------------------|----------------------------------------|
+|`[String]`|false   |named   |true (ByPropertyName)|Palette<br/>ColorScheme<br/>ColorPalette|
 
 #### **GoogleFont**
 The [Google Font](https://fonts.google.com/) name.
@@ -214,11 +214,11 @@ A javascript import map.  This allows you to import javascript modules.
 
 #### **QueryParameter**
 A collection of query parameters.
-These will be appended onto the `-WebSocketUri`.
+These will be appended onto the `-SocketUrl`.
 
-|Type           |Required|Position|PipelineInput|
-|---------------|--------|--------|-------------|
-|`[IDictionary]`|false   |named   |false        |
+|Type           |Required|Position|PipelineInput        |
+|---------------|--------|--------|---------------------|
+|`[IDictionary]`|false   |named   |true (ByPropertyName)|
 
 #### **Handler**
 A ScriptBlock that will handle the output of the WebSocket.
@@ -322,9 +322,9 @@ If set, will force a new job to be created, rather than reusing an existing job.
 #### **SubProtocol**
 The subprotocol used by the websocket.  If not provided, this will default to `json`.
 
-|Type      |Required|Position|PipelineInput|
-|----------|--------|--------|-------------|
-|`[String]`|false   |named   |false        |
+|Type      |Required|Position|PipelineInput        |
+|----------|--------|--------|---------------------|
+|`[String]`|false   |named   |true (ByPropertyName)|
 
 #### **Filter**
 One or more filters to apply to the output of the WebSocket.
@@ -333,18 +333,18 @@ If they are strings or regexes, they will be applied to the raw text.
 If they are scriptblocks, they will be applied to the deserialized JSON.
 These filters will be run within the WebSocket job.
 
-|Type          |Required|Position|PipelineInput|
-|--------------|--------|--------|-------------|
-|`[PSObject[]]`|false   |named   |false        |
+|Type          |Required|Position|PipelineInput        |
+|--------------|--------|--------|---------------------|
+|`[PSObject[]]`|false   |named   |true (ByPropertyName)|
 
 #### **WatchFor**
 If set, will watch the output of a WebSocket job for one or more conditions.
 The conditions are the keys of the dictionary, and can be a regex, a string, or a scriptblock.
 The values of the dictionary are what will happen when a match is found.
 
-|Type           |Required|Position|PipelineInput|Aliases               |
-|---------------|--------|--------|-------------|----------------------|
-|`[IDictionary]`|false   |named   |false        |WhereFor<br/>Wherefore|
+|Type           |Required|Position|PipelineInput        |Aliases               |
+|---------------|--------|--------|---------------------|----------------------|
+|`[IDictionary]`|false   |named   |true (ByPropertyName)|WhereFor<br/>Wherefore|
 
 #### **TimeOut**
 The timeout for the WebSocket connection.  If this is provided, after the timeout elapsed, the WebSocket will be closed.
@@ -357,9 +357,9 @@ The timeout for the WebSocket connection.  If this is provided, after the timeou
 If provided, will decorate the objects outputted from a websocket job.
 This will only decorate objects converted from JSON.
 
-|Type        |Required|Position|PipelineInput|Aliases                                |
-|------------|--------|--------|-------------|---------------------------------------|
-|`[String[]]`|false   |named   |false        |PSTypeNames<br/>Decorate<br/>Decoration|
+|Type        |Required|Position|PipelineInput        |Aliases                                |
+|------------|--------|--------|---------------------|---------------------------------------|
+|`[String[]]`|false   |named   |true (ByPropertyName)|PSTypeNames<br/>Decorate<br/>Decoration|
 
 #### **Maximum**
 The maximum number of messages to receive before closing the WebSocket.
@@ -379,25 +379,25 @@ The throttle limit used when creating background jobs.
 The maximum time to wait for a connection to be established.
 By default, this is 7 seconds.
 
-|Type        |Required|Position|PipelineInput|
-|------------|--------|--------|-------------|
-|`[TimeSpan]`|false   |named   |false        |
+|Type        |Required|Position|PipelineInput        |
+|------------|--------|--------|---------------------|
+|`[TimeSpan]`|false   |named   |true (ByPropertyName)|
 
 #### **Runspace**
 The Runspace where the handler should run.
 Runspaces allow you to limit the scope of the handler.
 
-|Type        |Required|Position|PipelineInput|
-|------------|--------|--------|-------------|
-|`[Runspace]`|false   |named   |false        |
+|Type        |Required|Position|PipelineInput        |
+|------------|--------|--------|---------------------|
+|`[Runspace]`|false   |named   |true (ByPropertyName)|
 
 #### **RunspacePool**
 The RunspacePool where the handler should run.
 RunspacePools allow you to limit the scope of the handler to a pool of runspaces.
 
-|Type            |Required|Position|PipelineInput|Aliases|
-|----------------|--------|--------|-------------|-------|
-|`[RunspacePool]`|false   |named   |false        |Pool   |
+|Type            |Required|Position|PipelineInput        |Aliases|
+|----------------|--------|--------|---------------------|-------|
+|`[RunspacePool]`|false   |named   |true (ByPropertyName)|Pool   |
 
 #### **IncludeTotalCount**
 
@@ -421,5 +421,8 @@ RunspacePools allow you to limit the scope of the handler to a pool of runspaces
 
 ### Syntax
 ```PowerShell
-Get-WebSocket [[-WebSocketUri] <Uri>] [[-RootUrl] <String[]>] [-Route <IDictionary>] [-HTML <String>] [-PaletteName <String>] [-GoogleFont <String>] [-CodeFont <String>] [-JavaScript <String[]>] [-ImportMap <IDictionary>] [-QueryParameter <IDictionary>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-Broadcast <PSObject>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-RawText] [-Binary] [-Force] [-SubProtocol <String>] [-Filter <PSObject[]>] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-PSTypeName <String[]>] [-Maximum <Int64>] [-ThrottleLimit <Int32>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [-IncludeTotalCount] [-Skip <UInt64>] [-First <UInt64>] [<CommonParameters>]
+Get-WebSocket [[-SocketUrl] <Uri>] [-QueryParameter <IDictionary>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-Broadcast <PSObject>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-RawText] [-Binary] [-Force] [-SubProtocol <String>] [-Filter <PSObject[]>] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-PSTypeName <String[]>] [-Maximum <Int64>] [-ThrottleLimit <Int32>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [-IncludeTotalCount] [-Skip <UInt64>] [-First <UInt64>] [<CommonParameters>]
+```
+```PowerShell
+Get-WebSocket [-RootUrl] <String[]> [-Route <IDictionary>] [-HTML <String>] [-PaletteName <String>] [-GoogleFont <String>] [-CodeFont <String>] [-JavaScript <String[]>] [-ImportMap <IDictionary>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-Broadcast <PSObject>] [-Force] [-TimeOut <TimeSpan>] [-Maximum <Int64>] [-ThrottleLimit <Int32>] [-IncludeTotalCount] [-Skip <UInt64>] [-First <UInt64>] [<CommonParameters>]
 ```
