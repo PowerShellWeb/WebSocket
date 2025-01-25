@@ -73,7 +73,7 @@
     {
       "Title": "EXAMPLE 9",
       "Markdown": "BlueSky, but just the hashtags",
-      "Code": "websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{\n    {$webSocketoutput.commit.record.text -match \"\\#\\w+\"}={\n        $matches.0\n    }                \n}"
+      "Code": "websocket wss://jetstream2.us-west.bsky.network/subscribe -QueryParameter @{\n    wantedCollections = 'app.bsky.feed.post'\n} -WatchFor @{\n    {$webSocketoutput.commit.record.text -match \"\\#\\w+\"}={\n        $matches.0\n    }                \n} -Maximum 1kb"
     },
     {
       "Title": "EXAMPLE 10",
