@@ -92,11 +92,13 @@ websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.
 BlueSky, but just the hashtags
 
 ```PowerShell
-websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{
+websocket wss://jetstream2.us-west.bsky.network/subscribe -QueryParameter @{
+    wantedCollections = 'app.bsky.feed.post'
+} -WatchFor @{
     {$webSocketoutput.commit.record.text -match "\#\w+"}={
         $matches.0
     }                
-}
+} -Maximum 1kb
 ```
 BlueSky, but just the hashtags (as links)
 
@@ -226,6 +228,14 @@ A ScriptBlock that will handle the output of the WebSocket.
 |Type           |Required|Position|PipelineInput|
 |---------------|--------|--------|-------------|
 |`[ScriptBlock]`|false   |named   |false        |
+
+#### **ForwardEvent**
+If set, will forward websocket messages as events.
+Only events that match -Filter will be forwarded.
+
+|Type      |Required|Position|PipelineInput        |Aliases|
+|----------|--------|--------|---------------------|-------|
+|`[Switch]`|false   |named   |true (ByPropertyName)|Forward|
 
 #### **Variable**
 Any variables to declare in the WebSocket job.
@@ -421,7 +431,7 @@ RunspacePools allow you to limit the scope of the handler to a pool of runspaces
 
 ### Syntax
 ```PowerShell
-Get-WebSocket [[-SocketUrl] <Uri>] [-QueryParameter <IDictionary>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-Broadcast <PSObject>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-RawText] [-Binary] [-Force] [-SubProtocol <String>] [-Filter <PSObject[]>] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-PSTypeName <String[]>] [-Maximum <Int64>] [-ThrottleLimit <Int32>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [-IncludeTotalCount] [-Skip <UInt64>] [-First <UInt64>] [<CommonParameters>]
+Get-WebSocket [[-SocketUrl] <Uri>] [-QueryParameter <IDictionary>] [-ForwardEvent] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-Broadcast <PSObject>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-RawText] [-Binary] [-Force] [-SubProtocol <String>] [-Filter <PSObject[]>] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-PSTypeName <String[]>] [-Maximum <Int64>] [-ThrottleLimit <Int32>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [-IncludeTotalCount] [-Skip <UInt64>] [-First <UInt64>] [<CommonParameters>]
 ```
 ```PowerShell
 Get-WebSocket [-RootUrl] <String[]> [-Route <IDictionary>] [-HTML <String>] [-PaletteName <String>] [-GoogleFont <String>] [-CodeFont <String>] [-JavaScript <String[]>] [-ImportMap <IDictionary>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-Broadcast <PSObject>] [-Force] [-TimeOut <TimeSpan>] [-Maximum <Int64>] [-ThrottleLimit <Int32>] [-IncludeTotalCount] [-Skip <UInt64>] [-First <UInt64>] [<CommonParameters>]
