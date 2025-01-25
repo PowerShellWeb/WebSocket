@@ -123,7 +123,7 @@ function Get-WebSocket {
 
     # One or more root urls.
     # If these are provided, a WebSocket server will be created with these listener prefixes.
-    [Parameter(Mandatory,Position=0,ValueFromPipelineByPropertyName,ParameterSetName='WebSocketServer')]
+    [Parameter(Mandatory,ValueFromPipelineByPropertyName,ParameterSetName='WebSocketServer')]
     [Alias('HostHeader','Host','CNAME','ListenerPrefix','ListenerPrefixes','ListenerUrl')]
     [string[]]
     $RootUrl,
@@ -633,7 +633,7 @@ function Get-WebSocket {
                             imports = $ImportMap
                         } | ConvertTo-Json -Depth 3
                         "</script>"
-                    ) -join [Environment]::NewLine                
+                    ) -join [Environment]::NewLine
                 }
 
                 # If a palette name was provided, we will include the 4bitcss stylesheet.
