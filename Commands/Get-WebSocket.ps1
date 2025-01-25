@@ -251,10 +251,11 @@ function Get-WebSocket {
     # after an initial message is received.    
     # This parameter can be either a ScriptBlock or any other object.
     # If it is a ScriptBlock, it will be run with the output of the WebSocket passed as the first argument.
+    # This will run after the socket is connected but before any messages are received.
     [Parameter(ParameterSetName='WebSocketClient')]
-    [Alias('Authorize','Identify')]
+    [Alias('Authorize','HelloMessage')]
     [PSObject]
-    $Authenticate,
+    $Authenticate,    
 
     # If set, will watch the output of the WebSocket job, outputting results continuously instead of outputting a websocket job.    
     [Parameter(ParameterSetName='WebSocketClient')]
@@ -382,14 +383,15 @@ function Get-WebSocket {
             
             if ($QueryParameter) {
                 $SocketUrl = [uri]"$($SocketUrl)$($SocketUrl.Query ? '&' : '?')$(@(
-                    foreach ($keyValuePair in $QueryParameter.GetEnumerator()) {
-                        if ($keyValuePair.Value -is [Collections.IList]) {
-                            foreach ($value in $keyValuePair.Value) {
-                                "$($keyValuePair.Key)=$([Web.HttpUtility]::UrlEncode($value).Replace('+', '%20'))"
+                    foreach ($keyValuePair in $QueryParameter.GetEnumerator()) {                        
+                        foreach ($value in $keyValuePair.Value) {
+                            $valueString = if ($value -is [bool] -or $value -is [switch]) {
+                                ($value -as [bool] -as [string]).ToLower()
+                            } else {
+                                $value
                             }
-                        } else {
-                            "$($keyValuePair.Key)=$([Web.HttpUtility]::UrlEncode($keyValuePair.Value).Replace('+', '%20'))"
-                        }
+                            "$($keyValuePair.Key)=$([Web.HttpUtility]::UrlEncode($valueString).Replace('+', '%20'))"
+                        }                    
                 }) -join '&')"
             }
 
@@ -421,7 +423,9 @@ function Get-WebSocket {
 
             $MessageCount = [long]0
             $FilteredCount = [long]0
-            $SkipCount = [long]0            
+            $SkipCount = [long]0
+            
+            $saidHello = $null
 
             :WebSocketMessageLoop while ($true) {
                 if ($ws.State -ne 'Open') {break }
@@ -437,9 +441,30 @@ function Get-WebSocket {
                     break
                 }
                 
+                if ($Authenticate -and -not $SaidHello) {
+                    # a number of websockets require some handshaking to authenticate
+                    $authenticationMessage =                                        
+                        if ($Authenticate -is [ScriptBlock]) {
+                            & $Authenticate $MessageObject
+                        } else {
+                            $authenticate
+                        }
+
+                    if ($authenticationMessage) {
+                        if ($authenticationMessage -isnot [string]) {
+                            $saidHello = $ws.SendAsync([ArraySegment[byte]]::new(
+                                $OutputEncoding.GetBytes((ConvertTo-Json -InputObject $authenticationMessage -Depth 10))
+                            ), 'Text', $true, $CT)
+                        }
+                    }
+                }
+                
                 $Buf = [byte[]]::new($BufferSize)
                 $Seg = [ArraySegment[byte]]::new($Buf)
-                $null = $ws.ReceiveAsync($Seg, $CT).Wait()
+                $receivingWebSocket = $ws.ReceiveAsync($Seg, $CT)
+                while (-not ($receivingWebSocket.IsCompleted -or $receivingWebSocket.IsFaulted -or $receivingWebSocket.IsCanceled)) {
+
+                }
                 $MessageCount++
                 
                 try {
@@ -475,25 +500,7 @@ function Get-WebSocket {
                                             }
                                         }
                                     }
-                                }
-
-                                if ($Authenticate) {
-                                    # a number of websockets require some handshaking to authenticate
-                                    $authenticationMessage =                                        
-                                        if ($Authenticate -is [ScriptBlock]) {
-                                            & $Authenticate $MessageObject
-                                        } else {
-                                            $authenticate
-                                        }
-
-                                    if ($authenticationMessage) {
-                                        if ($authenticationMessage -isnot [string]) {
-                                            $ws.SendAsync([ArraySegment[byte]]::new(
-                                                $OutputEncoding.GetBytes((ConvertTo-Json -InputObject $authenticationMessage -Depth 10))
-                                            ), 'Text', $true, $CT)                                            
-                                        }
-                                    }
-                                }
+                                }                                
 
                                 if ($Skip -and ($SkipCount -le $Skip)) {
                                     $SkipCount++
@@ -1110,7 +1117,7 @@ function Get-WebSocket {
                 Start-Sleep -Milliseconds 0
             }
             
-            foreach ($keyValuePair in $Variable.GetEnumerator()) {
+            foreach ($keyValuePair in $Variable.GetEnumerator()) {                
                 $webSocketJob.psobject.properties.add(
                     [psnoteproperty]::new($keyValuePair.Key, $keyValuePair.Value), $true
                 )
