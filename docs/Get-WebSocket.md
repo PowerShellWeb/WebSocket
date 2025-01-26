@@ -314,10 +314,11 @@ Many websockets require an initial authentication handshake
 after an initial message is received.    
 This parameter can be either a ScriptBlock or any other object.
 If it is a ScriptBlock, it will be run with the output of the WebSocket passed as the first argument.
+This will run after the socket is connected but before any messages are received.
 
-|Type        |Required|Position|PipelineInput|Aliases               |
-|------------|--------|--------|-------------|----------------------|
-|`[PSObject]`|false   |named   |false        |Authorize<br/>Identify|
+|Type        |Required|Position|PipelineInput|Aliases                   |
+|------------|--------|--------|-------------|--------------------------|
+|`[PSObject]`|false   |named   |false        |Authorize<br/>HelloMessage|
 
 #### **Watch**
 If set, will watch the output of the WebSocket job, outputting results continuously instead of outputting a websocket job.
