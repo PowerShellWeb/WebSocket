@@ -1205,10 +1205,14 @@ function Get-WebSocket {
             . $SocketClientJob -Variable $Variable
             return
         }
+
+        # If -Debug was not passed, we're running in a background thread job.
         $webSocketJob =
             if ($SocketUrl) {
+                # If we had no name, we will use the SocketUrl as the name.
                 if (-not $name) {
-                    $Name = $SocketUrl
+                    # and we will ensure that it starts with `ws://` or `wss://`
+                    $Name = $SocketUrl -replace '^http', 'ws'
                 }
 
                 $existingJob = foreach ($jobWithThisName in (Get-Job -Name $Name -ErrorAction Ignore)) {
