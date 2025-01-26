@@ -670,9 +670,14 @@ function Get-WebSocket {
                             # Otherwise, we'll just run the handler.
                             $webSocketMessage | . $handler
                         }
-                    } else {
-                        $webSocketMessage
                     }
+
+                    # If we have a response from the handler,
+                    if ($handledResponse) {
+                        $handledResponse # emit that response.
+                    } else {
+                        $webSocketMessage # otherwise, emit the message.
+                    }                    
                 } catch { 
                     Write-Error $_
                 }
@@ -897,7 +902,7 @@ function Get-WebSocket {
 
                         # Now add the result it to the SocketRequests lookup table, using the request trace identifier as the key.
                         $clientBuffer = $webSocketResult.WebSocket::CreateClientBuffer($BufferSize, $BufferSize)
-                        $httpListener.SocketRequests[$context.Request.RequestTraceIdentifier] = [Ordered]@{
+                        $socketObject = [PSCustomObject][Ordered]@{
                             Context = $context
                             WebSocketContext = $webSocketResult
                             WebSocket = $webSocketResult.WebSocket
@@ -908,6 +913,10 @@ function Get-WebSocket {
                             MessageQueue = [Collections.Queue]::new()
                             MessageCount = [long]0
                         }
+                        if (-not $httpListener.SocketRequests["$($webSocketResult.RequestUri)"]) {
+                            $httpListener.SocketRequests["$($webSocketResult.RequestUri)"] = [Collections.Queue]::new()
+                        }
+                        $httpListener.SocketRequests["$($webSocketResult.RequestUri)"].Enqueue($socketObject)                        
                         # and add the websocketcontext result to the message data.
                         $messageData["WebSocketContext"] = $webSocketResult
                         # also add the websocket result to the message data,
@@ -1157,7 +1166,10 @@ function Get-WebSocket {
                         [psnoteproperty]::new($keyValuePair.Key, $keyValuePair.Value), $true
                     )
                 }
-                $httpListenerJob
+
+                if (-not $Broadcast) {
+                    $httpListenerJob
+                }
             }
 
             if ($Broadcast) {
@@ -1168,7 +1180,7 @@ function Get-WebSocket {
                         $broadcast = [ArraySegment[byte]]::new($broadcast)
                     }
                     if ($broadcast -is [System.ArraySegment[byte]]) {
-                        foreach ($socketRequest in $httpListener.SocketRequests.Values) {
+                        foreach ($socketRequest in @($httpListener.SocketRequests.Values)) {
                             $socketRequest.WebSocket.SendAsync($broadcast, 'Binary', 'EndOfMessage', [Threading.CancellationToken]::None)
                         }                            
                     }
@@ -1177,7 +1189,7 @@ function Get-WebSocket {
                             $broadcastJson = ConvertTo-Json -InputObject $broadcastItem
                             $broadcastJsonBytes = $OutputEncoding.GetBytes($broadcastJson)
                             $broadcastSegment = [ArraySegment[byte]]::new($broadcastJsonBytes)
-                            foreach ($socketRequest in $httpListener.SocketRequests.Values) {
+                            foreach ($socketRequest in @($httpListener.SocketRequests.Values | . { process { $_ } })) {
                                 $socketRequest.WebSocket.SendAsync($broadcastSegment, 'Text', 'EndOfMessage', [Threading.CancellationToken]::None)
                             }
                         }
