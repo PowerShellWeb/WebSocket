@@ -255,7 +255,11 @@ function Get-WebSocket {
     [Parameter(ParameterSetName='WebSocketClient')]
     [Alias('Authorize','HelloMessage')]
     [PSObject]
-    $Authenticate,    
+    $Authenticate,
+        
+    [Alias('Identify','AutoReply')]
+    [PSObject]
+    $Reply,
 
     # If set, will watch the output of the WebSocket job, outputting results continuously instead of outputting a websocket job.    
     [Parameter(ParameterSetName='WebSocketClient')]
@@ -428,7 +432,12 @@ function Get-WebSocket {
             $saidHello = $null
 
             :WebSocketMessageLoop while ($true) {
-                if ($ws.State -ne 'Open') {break }
+                if ($ws.State -ne 'Open') {
+                    if ($ws.CloseStatusDescription) {
+                        Write-Error $ws.CloseStatusDescription -TargetObject $ws
+                    }
+                    break
+                }
                 if ($TimeOut -and ([DateTime]::Now - $webSocketStartTime) -gt $TimeOut) {
                     $ws.CloseAsync([Net.WebSockets.WebSocketCloseStatus]::NormalClosure, 'Timeout', $CT).Wait()
                     break
