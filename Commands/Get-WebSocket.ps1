@@ -484,17 +484,23 @@ function Get-WebSocket {
                     break
                 }
                 
+                # If we're authenticating, and haven't yet said hello
                 if ($Authenticate -and -not $SaidHello) {
-                    # a number of websockets require some handshaking to authenticate
-                    $authenticationMessage =                                        
+                    # then we should say hello.
+                    # Determine the authentication message
+                    $authenticationMessage =
+                        # If the authentication message is a scriptblock,
                         if ($Authenticate -is [ScriptBlock]) {
-                            & $Authenticate $MessageObject
+                            & $Authenticate # run it
                         } else {
-                            $authenticate
+                            $authenticate # otherwise, use it as-is.
                         }
 
+                    # If we have an authentication message
                     if ($authenticationMessage) {
+                        # and it's not a string
                         if ($authenticationMessage -isnot [string]) {
+                            # then we should send it as JSON and mark that we've said hello.
                             $saidHello = $ws.SendAsync([ArraySegment[byte]]::new(
                                 $OutputEncoding.GetBytes((ConvertTo-Json -InputObject $authenticationMessage -Depth 10))
                             ), 'Text', $true, $CT)
@@ -502,26 +508,43 @@ function Get-WebSocket {
                     }
                 }
                 
+                # Ok, let's get the next message.
                 $Buf = [byte[]]::new($BufferSize)
                 $Seg = [ArraySegment[byte]]::new($Buf)
                 $receivingWebSocket = $ws.ReceiveAsync($Seg, $CT)
+                # use this tight loop to let us cancel the await if we need to.
                 while (-not ($receivingWebSocket.IsCompleted -or $receivingWebSocket.IsFaulted -or $receivingWebSocket.IsCanceled)) {
 
+                }
+                # If we had a problem, write an error.
+                if ($receivingWebSocket.Exception) {
+                    Write-Error -Exception $receivingWebSocket.Exception -Category ProtocolError
+                    continue
                 }
                 $MessageCount++
                 
                 try {
+                    # If we have a handshake and we haven't yet shaken hands
                     if ($Handshake -and -not $shookHands) {
-                        # a number of websockets require some handshaking
-                        $handShakeMessage =                                        
+                        # then we should shake hands.
+                        # Get the message string
+                        $messageString = $OutputEncoding.GetString($Buf, 0, $Buf.Count)
+                        # and try to convert it from JSON.
+                        $messageObject = ConvertFrom-Json -InputObject $messageString *>&1
+                        # Determine the handshake message
+                        $handShakeMessage =
+                            # If the handshake message is a scriptblock,                          
                             if ($Handshake -is [ScriptBlock]) {
-                                & $Handshake $MessageObject
+                                & $Handshake $MessageObject # run it and pass the message
                             } else {
-                                $Handshake
+                                $Handshake # otherwise, use it as-is.
                             }
     
+                        # If we have a handshake message
                         if ($handShakeMessage) {
+                            # and it's not a string
                             if ($handShakeMessage -isnot [string]) {
+                                # then we should send it as JSON and mark that we've shaken hands.
                                 $saidHello = $ws.SendAsync([ArraySegment[byte]]::new(
                                     $OutputEncoding.GetBytes((ConvertTo-Json -InputObject $handShakeMessage -Depth 10))
                                 ), 'Text', $true, $CT)
@@ -529,97 +552,137 @@ function Get-WebSocket {
                         }
                     }
 
+                    # Get the message from the websocket
                     $webSocketMessage =
-                        if ($Binary) {
-                            $Buf -gt 0
+                        if ($Binary) { # If we wanted binary
+                            $Buf -gt 0 -as [byte[]] # then return non-null bytes
                         } else {
+                            # otherwise, get the message as a string
                             $messageString = $OutputEncoding.GetString($Buf, 0, $Buf.Count)
+                            # if we have any filters
                             if ($Filter) {
+                                # then we see if we can apply them now.
                                 foreach ($fil in $filter) {
+                                    # Wilcard filters can be applied to the raw text
                                     if ($fil -is [string] -and $messageString -like "*$fil*") {
                                         $FilteredCount++
                                         continue WebSocketMessageLoop
                                     }
+                                    # and so can regex filters.
                                     if ($fil -is [regex] -and $fil.IsMatch($messageString)) {
                                         $FilteredCount++
                                         continue WebSocketMessageLoop
                                     }
                                 }
                             }
+                            # If we have asked for -RawText
                             if ($RawText) {
-                                $messageString
+                                $messageString # then return the raw text
                             } else {
-                                $MessageObject = ConvertFrom-Json -InputObject $messageString                                
+                                # Otherwise, try to convert the message from JSON.
+                                $MessageObject = ConvertFrom-Json -InputObject $messageString
+                                
+                                # Now we can run any filters that are scriptblocks or commands.
                                 if ($filter) {
                                     foreach ($fil in $Filter) {
-                                        if ($fil -is [ScriptBlock] -or 
+                                        if ($fil -is [ScriptBlock] -or
                                             $fil -is [Management.Automation.CommandInfo]
                                         ) {
-                                            if (& $fil $MessageObject) {
-                                                $FilteredCount++
+                                            # Capture the output of the filter
+                                            $filterOutput = $MessageObject | & $fil $MessageObject
+                                            # if the output was falsy,
+                                            if (-not $filterOutput) {
+                                                $FilteredCount++ # filter out the message.
                                                 continue WebSocketMessageLoop
                                             }
                                         }
                                     }
-                                }                                
+                                }
 
+                                # If -Skip was provided and we haven't skipped enough messages
                                 if ($Skip -and ($SkipCount -le $Skip)) {
+                                    # then skip this message.
                                     $SkipCount++
                                     continue WebSocketMessageLoop
                                 }
-                                                                
-                                $MessageObject
+                                
+                                # Now, emit the message object.
+                                # (expressions that are not assigned will be outputted)
+                                $MessageObject                       
 
-                                # If we are forwarding events
-                                if ($ForwardEvent -and $MainRunspace.Events.GenerateEvent) {
-                                    # generate an event in the main runspace
-                                    $null = $MainRunspace.Events.GenerateEvent(
-                                        "$SocketUrl",
-                                        $ws,
-                                        @($MessageObject),
-                                        $MessageObject
-                                    )
-                                }                                
-
+                                # If we have a -First parameter, and we have not yet reached the maximum
+                                # (after accounting for skips and filters)
                                 if ($First -and ($MessageCount - $FilteredCount - $SkipCount) -ge $First) {
+                                    # then set the maximum to first (which will cancel this after the next loop)
                                     $Maximum = $first
                                 }
                             }
                         }
+                    
+                    # If we want to decorate the output
                     if ($PSTypeName) {
+                        # clear it's typenames
                         $webSocketMessage.pstypenames.clear()
-                        [Array]::Reverse($PSTypeName)
-                        foreach ($psType in $psTypeName) {
-                            $webSocketMessage.pstypenames.add($psType)
-                        }
+                        for ($typeNameIndex = $PSTypeName.Length - 1; $typeNameIndex -ge 0; $typeNameIndex--) {
+                            # and add each type name in reverse order
+                            $webSocketMessage.pstypenames.add($PSTypeName[$typeNameIndex])
+                        }                  
                     }
-                    if ($handler) {
-                        $psCmd =  
+
+                    # If we are forwarding events
+                    if ($ForwardEvent -and $MainRunspace.Events.GenerateEvent) {
+                        # generate an event in the main runspace
+                        $null = $MainRunspace.Events.GenerateEvent(
+                            "$SocketUrl",
+                            $ws,
+                            @($webSocketMessage),
+                            $webSocketMessage
+                        )
+                    }
+
+                    # If we have an output handler, try to run it and get the output
+                    $handledResponse = if ($handler) {
+                        # We may need to run the handler in a `[PowerShell]` command.
+                        $psCmd =
+                            # This is true if we want `NoLanguage` mode.
                             if ($runspace.LanguageMode -eq 'NoLanguage' -or 
                                 $runspacePool.InitialSessionState.LanguageMode -eq 'NoLanguage') {
+                                # (in which case we'll call .GetPowerShell())
                                 $handler.GetPowerShell()
-                            } elseif ($Runspace -or $RunspacePool) {
-                                [PowerShell]::Create().AddScript($handler)
+                            } elseif (
+                                # or if we have a runspace or runspace pool
+                                $Runspace -or $RunspacePool
+                            ) {
+                                # (in which case we'll `.Create()` and `.AddScript()`) 
+                                [PowerShell]::Create().AddScript($handler, $true)
                             }
                         if ($psCmd) {
+                            # If we have a runspace, we'll use that.
                             if ($Runspace) {
                                 $psCmd.Runspace = $Runspace
                             } elseif ($RunspacePool) {
+                                # or, alternatively, we can use a runspace pool.
                                 $psCmd.RunspacePool = $RunspacePool
                             }
+                            # Now, we can invoke the command.
+                            $psCmd.Invoke(@($webSocketMessage))
                         } else {
+                            # Otherwise, we'll just run the handler.
                             $webSocketMessage | . $handler
                         }
-                        
                     } else {
                         $webSocketMessage
-                    }                    
+                    }
                 } catch { 
                     Write-Error $_
                 }
             }
 
+            # Now that the socket is closed,
+            # check for a status description.
+            # If there is one,
             if ($ws.CloseStatusDescription) {
+                # write an error.
                 Write-Error $ws.CloseStatusDescription -TargetObject $ws
             }
         }
