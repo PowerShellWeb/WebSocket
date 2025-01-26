@@ -188,8 +188,9 @@ function Get-WebSocket {
     [Collections.IDictionary]
     $QueryParameter,
 
-    # A ScriptBlock that will handle the output of the WebSocket.
-    [Parameter(ParameterSetName='WebSocketServer')]
+    # A ScriptBlock that can handle the output of the WebSocket or the Http Request.
+    # This may be run in a separate `-Runspace` or `-RunspacePool`.
+    # The output of the WebSocket or the Context will be passed as an object.
     [ScriptBlock]
     $Handler,
 
@@ -222,6 +223,9 @@ function Get-WebSocket {
     [int]
     $BufferSize = 64kb,
 
+    # If provided, will send an object.
+    # If this is a scriptblock, it will be run and the output will be sent.
+    [Alias('Send')]
     [PSObject]
     $Broadcast,
 
@@ -352,13 +356,13 @@ function Get-WebSocket {
 
     # The Runspace where the handler should run.
     # Runspaces allow you to limit the scope of the handler.
-    [Parameter(ValueFromPipelineByPropertyName,ParameterSetName='WebSocketClient')]
+    [Parameter(ValueFromPipelineByPropertyName)]
     [Runspace]
     $Runspace,
 
     # The RunspacePool where the handler should run.
     # RunspacePools allow you to limit the scope of the handler to a pool of runspaces.
-    [Parameter(ValueFromPipelineByPropertyName,ParameterSetName='WebSocketClient')]
+    [Parameter(ValueFromPipelineByPropertyName)]
     [Management.Automation.Runspaces.RunspacePool]
     [Alias('Pool')]
     $RunspacePool
@@ -913,6 +917,7 @@ function Get-WebSocket {
                             MessageQueue = [Collections.Queue]::new()
                             MessageCount = [long]0
                         }
+                        
                         if (-not $httpListener.SocketRequests["$($webSocketResult.RequestUri)"]) {
                             $httpListener.SocketRequests["$($webSocketResult.RequestUri)"] = [Collections.Queue]::new()
                         }
@@ -960,6 +965,40 @@ function Get-WebSocket {
                             $routeTable[$potentialKey]
                             $routeKey = $potentialKey
                             break
+                        }
+                    }
+                }
+
+                if (-not $routedTo -and $handler) {
+                    # If we have an output handler, try to run it and get the output
+                    $routedTo = if ($handler) {
+                        # We may need to run the handler in a `[PowerShell]` command.
+                        $psCmd =
+                            # This is true if we want `NoLanguage` mode.
+                            if ($runspace.LanguageMode -eq 'NoLanguage' -or 
+                                $runspacePool.InitialSessionState.LanguageMode -eq 'NoLanguage') {
+                                # (in which case we'll call .GetPowerShell())
+                                $handler.GetPowerShell()
+                            } elseif (
+                                # or if we have a runspace or runspace pool
+                                $Runspace -or $RunspacePool
+                            ) {
+                                # (in which case we'll `.Create()` and `.AddScript()`) 
+                                [PowerShell]::Create().AddScript($handler, $true)
+                            }
+                        if ($psCmd) {
+                            # If we have a runspace, we'll use that.
+                            if ($Runspace) {
+                                $psCmd.Runspace = $Runspace
+                            } elseif ($RunspacePool) {
+                                # or, alternatively, we can use a runspace pool.
+                                $psCmd.RunspacePool = $RunspacePool
+                            }
+                            # Now, we can invoke the command.
+                            $psCmd.Invoke(@($context))
+                        } else {
+                            # Otherwise, we'll just run the handler.
+                            $context | . $handler
                         }
                     }
                 }
@@ -1170,33 +1209,7 @@ function Get-WebSocket {
                 if (-not $Broadcast) {
                     $httpListenerJob
                 }
-            }
-
-            if ($Broadcast) {
-                if (-not $httpListener.SocketRequests) {
-                    Write-Warning "No WebSocket connections to broadcast to."
-                } else {
-                    if ($broadcast -is [byte[]]) {
-                        $broadcast = [ArraySegment[byte]]::new($broadcast)
-                    }
-                    if ($broadcast -is [System.ArraySegment[byte]]) {
-                        foreach ($socketRequest in @($httpListener.SocketRequests.Values)) {
-                            $socketRequest.WebSocket.SendAsync($broadcast, 'Binary', 'EndOfMessage', [Threading.CancellationToken]::None)
-                        }                            
-                    }
-                    else {
-                        foreach ($broadcastItem in $Broadcast) {
-                            $broadcastJson = ConvertTo-Json -InputObject $broadcastItem
-                            $broadcastJsonBytes = $OutputEncoding.GetBytes($broadcastJson)
-                            $broadcastSegment = [ArraySegment[byte]]::new($broadcastJsonBytes)
-                            foreach ($socketRequest in @($httpListener.SocketRequests.Values | . { process { $_ } })) {
-                                $socketRequest.WebSocket.SendAsync($broadcastSegment, 'Text', 'EndOfMessage', [Threading.CancellationToken]::None)
-                            }
-                        }
-                    }                    
-                }
-                
-            }
+            }            
         }
 
         # If `-Debug` was passed,
@@ -1267,7 +1280,58 @@ function Get-WebSocket {
                 )
             }
             $webSocketJob.pstypenames.insert(0, 'WebSocket.ThreadJob')
-        }        
+        }
+
+        # If we're broadcasting a message
+        if ($Broadcast) {
+            # find out who is listening.
+            $socketList = @(
+                if ($httpListener.SocketRequests) {
+                    @(foreach ($queue in $httpListener.SocketRequests.Values) {
+                        foreach ($socket in $queue) {
+                            if ($socket.WebSocket.State -eq 'Open') {
+                                $socket.WebSocket
+                            }                                
+                        }
+                    })
+                }
+                if ($webSocketJob.WebSocket) {
+                    $webSocketJob.WebSocket
+                }
+            )
+
+            # If no one is listening, write a warning.
+            if (-not $socketList) {
+                Write-Warning "No one is listening"
+            }
+
+            # If the broadcast is a scriptblock or command, run it.
+            if ($Broadcast -is [ScriptBlock] -or 
+                $Broadcast -is [Management.Automation.CommandInfo]) {
+                $Broadcast = & $Broadcast
+            }
+            # If the broadcast is a byte array, convert it to an array segment.
+            if ($broadcast -is [byte[]]) {
+                $broadcast = [ArraySegment[byte]]::new($broadcast)
+            }
+
+            # If the broadcast is an array segment, send it as binary.
+            if ($broadcast -is [ArraySegment[byte]]) {
+                foreach ($socket in $socketList) {
+                    $null = $socket.SendAsync($broadcast, 'Binary', 'EndOfMessage', [Threading.CancellationToken]::None)
+                }                
+            }
+            else {
+                # Otherwise, convert the broadcast to JSON.
+                $broadcastJson = ConvertTo-Json -InputObject $Broadcast
+                $broadcastJsonBytes = $OutputEncoding.GetBytes($broadcastJson)
+                $broadcastSegment = [ArraySegment[byte]]::new($broadcastJsonBytes)
+                foreach ($socket in $socketList) {
+                    $null = $socket.SendAsync($broadcastSegment, 'Text', 'EndOfMessage', [Threading.CancellationToken]::None)
+                }                
+            }
+            $Broadcast # emit the broadcast.
+        }
         
         if ($Watch -and $webSocketJob) {
             do {
@@ -1303,8 +1367,8 @@ function Get-WebSocket {
                     }
                 }
             }
-        }
-        elseif ($webSocketJob) {
+        }        
+        elseif ($webSocketJob -and -not $broadcast) {
             $webSocketJob
         }        
     }
