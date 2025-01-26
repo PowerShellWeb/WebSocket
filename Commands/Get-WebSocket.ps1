@@ -262,7 +262,7 @@ function Get-WebSocket {
     # If it is a ScriptBlock, it will be run with the output of the WebSocket passed as the first argument.
     # This will run after the socket is connected and the first message is received.
     [Parameter(ParameterSetName='WebSocketClient')]        
-    [Alias('Identify','Handshake')]
+    [Alias('Identify')]
     [PSObject]
     $Handshake,
 
@@ -380,78 +380,106 @@ function Get-WebSocket {
                 $ExecutionContext.SessionState.PSVariable.Set($keyValue.Key, $keyValue.Value)
             }            
 
+            # If we have no socket url,
             if ((-not $SocketUrl)) {
+                # throw up an error.
                 throw "No SocketUrl"
             }
 
+            # If the socket url does not have a scheme
             if (-not $SocketUrl.Scheme) {
+                # assume `wss`
                 $SocketUrl = [uri]"wss://$SocketUrl"
-            } elseif ($SocketUrl.Scheme -match '^https?') {
+            } elseif (
+                # otherwise, if the scheme is http or https
+                $SocketUrl.Scheme -match '^https?'
+            ) {
+                # replace it with `ws` or `wss`
                 $SocketUrl = $SocketUrl -replace '^http', 'ws'
             }
             
+            # If any query parameters were provided
             if ($QueryParameter) {
+                # add them to the socket url
                 $SocketUrl = [uri]"$($SocketUrl)$($SocketUrl.Query ? '&' : '?')$(@(
-                    foreach ($keyValuePair in $QueryParameter.GetEnumerator()) {                        
+                    foreach ($keyValuePair in $QueryParameter.GetEnumerator()) {
+                        # cannocially, each key value pair should be url encoded, 
+                        # and multiple values should be passed multiple times.
                         foreach ($value in $keyValuePair.Value) {
-                            $valueString = if ($value -is [bool] -or $value -is [switch]) {
-                                ($value -as [bool] -as [string]).ToLower()
-                            } else {
-                                $value
-                            }
+                            $valueString =
+                                # If the value is a boolean or a switch,
+                                if ($value -is [bool] -or $value -is [switch]) {
+                                    # convert it to a string and make it lowercase.
+                                    ($value -as [bool] -as [string]).ToLower()
+                                } else {
+                                    # Otherwise, just stringify.
+                                    "$value"
+                                }
                             "$($keyValuePair.Key)=$([Web.HttpUtility]::UrlEncode($valueString).Replace('+', '%20'))"
                         }                    
                 }) -join '&')"
             }
 
+            # If we had not set a -BufferSize, 
             if (-not $BufferSize) {
-                $BufferSize = 64kb
+                $BufferSize = 64kb # default to 64kb.
             }
 
+            # Create a cancellation token, as this will save syntax space
             $CT = [Threading.CancellationToken]::None
             
+            # If `$WebSocket `is not already a websocket
             if ($webSocket -isnot [Net.WebSockets.ClientWebSocket]) {
+                # create a new socket
                 $ws = [Net.WebSockets.ClientWebSocket]::new()
                 if ($SubProtocol) {
+                    # and add the subprotocol
                     $ws.Options.AddSubProtocol($SubProtocol)
                 } else {
                     $ws.Options.AddSubProtocol('json')
                 }
+                # If there are headers
                 if ($Header) {
+                    # add them to the initial socket request.
                     foreach ($headerKeyValue in $header.GetEnumerator()) {
                         $ws.Options.SetRequestHeader($headerKeyValue.Key, $headerKeyValue.Value)
                     }                    
                 }
+                # Now, let's try to connect to the WebSocket.
                 $null = $ws.ConnectAsync($SocketUrl, $CT).Wait()
             } else {
                 $ws = $WebSocket
             }            
 
+            # Keep track of the time
             $webSocketStartTime = $Variable.WebSocketStartTime = [DateTime]::Now
+            # and add the WebSocket to the variable dictionary, so we can access it later.
             $Variable.WebSocket = $ws
 
-            $MessageCount = [long]0
-            $FilteredCount = [long]0
-            $SkipCount = [long]0
+            # Initialize some counters:            
+            $MessageCount = [long]0  # * The number of messages received
+            $FilteredCount = [long]0 # * The number of messages filtered out
+            $SkipCount = [long]0     # * The number of messages skipped
             
-            $saidHello = $null
-            $shookHands = $null
+            # Initialize variables related to handshaking
+            $saidHello = $null # * Whether we have said hello
+            $shookHands = $null # * Whether we have shaken hands
 
-            :WebSocketMessageLoop while ($true) {
-                if ($ws.State -ne 'Open') {
-                    if ($ws.CloseStatusDescription) {
-                        Write-Error $ws.CloseStatusDescription -TargetObject $ws
-                    }
-                    break
-                }
+            # This loop will run as long as the websocket is open.
+            :WebSocketMessageLoop while ($ws.State -eq 'Open') {
+                # If we've given a timeout for the websocket,
+                # and the websocket has been open for longer than the timeout, 
                 if ($TimeOut -and ([DateTime]::Now - $webSocketStartTime) -gt $TimeOut) {
+                    # then it's closing time (you don't have to go home but you can't stay here).
                     $ws.CloseAsync([Net.WebSockets.WebSocketCloseStatus]::NormalClosure, 'Timeout', $CT).Wait()
                     break
                 }
 
+                # If we've gotten the maximum number of messages,
                 if ($Maximum -and (
                     ($MessageCount - $FilteredCount) -ge $Maximum
                 )) {
+                    # then I can't even take any more responses.
                     $ws.CloseAsync([Net.WebSockets.WebSocketCloseStatus]::NormalClosure, 'Maximum messages reached', $CT).Wait()
                     break
                 }
@@ -589,6 +617,10 @@ function Get-WebSocket {
                 } catch { 
                     Write-Error $_
                 }
+            }
+
+            if ($ws.CloseStatusDescription) {
+                Write-Error $ws.CloseStatusDescription -TargetObject $ws
             }
         }
         $SocketServerJob = {
