@@ -256,10 +256,15 @@ function Get-WebSocket {
     [Alias('Authorize','HelloMessage')]
     [PSObject]
     $Authenticate,
-        
-    [Alias('Identify','AutoReply')]
+
+    # If provided, will shake hands after the first websocket message is received.
+    # This parameter can be either a ScriptBlock or any other object.
+    # If it is a ScriptBlock, it will be run with the output of the WebSocket passed as the first argument.
+    # This will run after the socket is connected and the first message is received.
+    [Parameter(ParameterSetName='WebSocketClient')]        
+    [Alias('Identify','Handshake')]
     [PSObject]
-    $Reply,
+    $Handshake,
 
     # If set, will watch the output of the WebSocket job, outputting results continuously instead of outputting a websocket job.    
     [Parameter(ParameterSetName='WebSocketClient')]
@@ -430,6 +435,7 @@ function Get-WebSocket {
             $SkipCount = [long]0
             
             $saidHello = $null
+            $shookHands = $null
 
             :WebSocketMessageLoop while ($true) {
                 if ($ws.State -ne 'Open') {
@@ -477,6 +483,24 @@ function Get-WebSocket {
                 $MessageCount++
                 
                 try {
+                    if ($Handshake -and -not $shookHands) {
+                        # a number of websockets require some handshaking
+                        $handShakeMessage =                                        
+                            if ($Handshake -is [ScriptBlock]) {
+                                & $Handshake $MessageObject
+                            } else {
+                                $Handshake
+                            }
+    
+                        if ($handShakeMessage) {
+                            if ($handShakeMessage -isnot [string]) {
+                                $saidHello = $ws.SendAsync([ArraySegment[byte]]::new(
+                                    $OutputEncoding.GetBytes((ConvertTo-Json -InputObject $handShakeMessage -Depth 10))
+                                ), 'Text', $true, $CT)
+                            }
+                        }
+                    }
+
                     $webSocketMessage =
                         if ($Binary) {
                             $Buf -gt 0
