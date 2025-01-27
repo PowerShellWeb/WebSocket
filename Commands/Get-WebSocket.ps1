@@ -213,7 +213,7 @@ function Get-WebSocket {
     [Alias('Headers')]
     $Header,
 
-    # The name of the WebSocket job.
+    # The name of the WebSocket job.    
     [string]
     $Name,
 
@@ -222,6 +222,7 @@ function Get-WebSocket {
     $InitializationScript = {},
 
     # The buffer size.  Defaults to 16kb.
+    [Parameter(ValueFromPipelineByPropertyName)]
     [int]
     $BufferSize = 64kb,
 
@@ -346,10 +347,12 @@ function Get-WebSocket {
     $PSTypeName,
 
     # The maximum number of messages to receive before closing the WebSocket.
+    [Parameter(ValueFromPipelineByPropertyName)]
     [long]
     $Maximum,
 
     # The throttle limit used when creating background jobs.
+    [Parameter(ValueFromPipelineByPropertyName)]
     [int]
     $ThrottleLimit = 64,
 
@@ -1138,7 +1141,21 @@ function Get-WebSocket {
         }                    
     }
 
-    process {        
+    process {
+        # Sometimes we want to customize the behavior of a command based off of the input object
+        # So, start off by capturing $_
+        $inputObject = $_
+        # If the input was a job, we might remap a parameter
+        if ($inputObject -is [ThreadJob.ThreadJob]) {
+            if ($inputObject.WebSocket -is [Net.WebSockets.ClientWebSocket] -and 
+                $inputObject.SocketUrl) {
+                $SocketUrl = $inputObject.SocketUrl
+            }
+            if ($inputObject.HttpListener -is [Net.HttpListener] -and 
+                $inputObject.RootUrl) {
+                $RootUrl = $inputObject.RootUrl
+            }
+        }
         if ((-not $SocketUrl) -and (-not $RootUrl)) {
             $socketAndListenerJobs =
                 foreach ($job in Get-Job) {
