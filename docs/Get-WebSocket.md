@@ -217,10 +217,11 @@ A javascript import map.  This allows you to import javascript modules.
 #### **QueryParameter**
 A collection of query parameters.
 These will be appended onto the `-SocketUrl`.
+Multiple values for a single parameter will be passed as multiple parameters.
 
-|Type           |Required|Position|PipelineInput        |
-|---------------|--------|--------|---------------------|
-|`[IDictionary]`|false   |named   |true (ByPropertyName)|
+|Type           |Required|Position|PipelineInput        |Aliases                  |
+|---------------|--------|--------|---------------------|-------------------------|
+|`[IDictionary]`|false   |named   |true (ByPropertyName)|QueryParameters<br/>Query|
 
 #### **Handler**
 A ScriptBlock that can handle the output of the WebSocket or the Http Request.
@@ -390,11 +391,12 @@ The values of the dictionary are what will happen when a match is found.
 |`[IDictionary]`|false   |named   |true (ByPropertyName)|WhereFor<br/>Wherefore|
 
 #### **TimeOut**
-The timeout for the WebSocket connection.  If this is provided, after the timeout elapsed, the WebSocket will be closed.
+The timeout for the WebSocket connection.
+If this is provided, after the timeout elapsed, the WebSocket will be closed.
 
-|Type        |Required|Position|PipelineInput|
-|------------|--------|--------|-------------|
-|`[TimeSpan]`|false   |named   |false        |
+|Type        |Required|Position|PipelineInput        |Aliases |
+|------------|--------|--------|---------------------|--------|
+|`[TimeSpan]`|false   |named   |true (ByPropertyName)|Lifespan|
 
 #### **PSTypeName**
 If provided, will decorate the objects outputted from a websocket job.
