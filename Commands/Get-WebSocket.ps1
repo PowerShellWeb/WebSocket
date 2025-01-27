@@ -184,7 +184,9 @@ function Get-WebSocket {
 
     # A collection of query parameters.
     # These will be appended onto the `-SocketUrl`.
+    # Multiple values for a single parameter will be passed as multiple parameters.
     [Parameter(ValueFromPipelineByPropertyName,ParameterSetName='WebSocketClient')]
+    [Alias('QueryParameters','Query')]
     [Collections.IDictionary]
     $QueryParameter,
 
@@ -315,7 +317,7 @@ function Get-WebSocket {
         $values = $_.values
         foreach ($key in $keys) {
             if ($key -isnot [scriptblock]) {
-                throw "Keys '$key' must be a scriptblock"
+                throw "Key '$key' must be a scriptblock"
             }
         }
         foreach ($value in $values) {
@@ -329,7 +331,10 @@ function Get-WebSocket {
     [Collections.IDictionary]
     $WatchFor,
 
-    # The timeout for the WebSocket connection.  If this is provided, after the timeout elapsed, the WebSocket will be closed.
+    # The timeout for the WebSocket connection.
+    # If this is provided, after the timeout elapsed, the WebSocket will be closed.
+    [Parameter(ValueFromPipelineByPropertyName)]
+    [Alias('Lifespan')]
     [TimeSpan]
     $TimeOut,
 
@@ -810,12 +815,20 @@ function Get-WebSocket {
                         "<style type='text/css'>$css</style>"
                     }
                 }                            
-            )
+            )            
 
             $httpListener.psobject.properties.add([psnoteproperty]::new('JobVariable',$Variable), $true)
+            $listenerStartTime = [DateTime]::Now
         
             # While the listener is listening,
             while ($httpListener.IsListening) {
+                # If we've given a timeout for the listener,
+                # and the listener has been open for longer than the timeout, 
+                if ($Timeout -and ([DateTime]::Now - $listenerStartTime) -gt $TimeOut) {
+                    # then it's closing time (you don't have to go home but you can't stay here).
+                    $httpListener.Stop()
+                    break
+                }
                 # get the context asynchronously.
                 $contextAsync = $httpListener.GetContextAsync()
                 # and wait for it to complete.
