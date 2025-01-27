@@ -272,9 +272,9 @@ The script to run when the WebSocket job starts.
 #### **BufferSize**
 The buffer size.  Defaults to 16kb.
 
-|Type     |Required|Position|PipelineInput|
-|---------|--------|--------|-------------|
-|`[Int32]`|false   |named   |false        |
+|Type     |Required|Position|PipelineInput        |
+|---------|--------|--------|---------------------|
+|`[Int32]`|false   |named   |true (ByPropertyName)|
 
 #### **Broadcast**
 If provided, will send an object.
@@ -409,16 +409,16 @@ This will only decorate objects converted from JSON.
 #### **Maximum**
 The maximum number of messages to receive before closing the WebSocket.
 
-|Type     |Required|Position|PipelineInput|
-|---------|--------|--------|-------------|
-|`[Int64]`|false   |named   |false        |
+|Type     |Required|Position|PipelineInput        |
+|---------|--------|--------|---------------------|
+|`[Int64]`|false   |named   |true (ByPropertyName)|
 
 #### **ThrottleLimit**
 The throttle limit used when creating background jobs.
 
-|Type     |Required|Position|PipelineInput|
-|---------|--------|--------|-------------|
-|`[Int32]`|false   |named   |false        |
+|Type     |Required|Position|PipelineInput        |
+|---------|--------|--------|---------------------|
+|`[Int32]`|false   |named   |true (ByPropertyName)|
 
 #### **ConnectionTimeout**
 The maximum time to wait for a connection to be established.
