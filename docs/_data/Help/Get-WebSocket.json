@@ -28,7 +28,11 @@
   "Outputs": [
     null
   ],
-  "Links": [],
+  "Links": [
+    "https://websocket.powershellweb.com/Get-WebSocket/",
+    "https://learn.microsoft.com/en-us/dotnet/api/system.net.websockets.clientwebsocket?wt.mc_id=MVP_321542",
+    "https://learn.microsoft.com/en-us/dotnet/api/system.net.httplistener?wt.mc_id=MVP_321542"
+  ],
   "Examples": [
     {
       "Title": "EXAMPLE 1",
