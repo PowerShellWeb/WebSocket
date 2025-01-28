@@ -299,6 +299,11 @@ function Get-WebSocket {
     [Parameter(ValueFromPipelineByPropertyName,ParameterSetName='WebSocketClient')]
     [string]
     $SubProtocol,
+
+    # If set, will not set a subprotocol.  This will only work with certain websocket servers, but will not work with an HTTP Listener WebSocket.
+    [Parameter(ValueFromPipelineByPropertyName,ParameterSetName='WebSocketClient')]
+    [switch]
+    $NoSubProtocol,
     
     # One or more filters to apply to the output of the WebSocket.
     # These can be strings, regexes, scriptblocks, or commands.
@@ -447,7 +452,7 @@ function Get-WebSocket {
                 if ($SubProtocol) {
                     # and add the subprotocol
                     $ws.Options.AddSubProtocol($SubProtocol)
-                } else {
+                } elseif (-not $NoSubProtocol) {
                     $ws.Options.AddSubProtocol('json')
                 }
                 # If there are headers
