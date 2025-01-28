@@ -8,6 +8,12 @@ function Get-WebSocket {
         This will create a job that connects to a WebSocket and outputs the results.
 
         If the `-Watch` parameter is provided, will output a continous stream of objects.
+    .LINK
+        https://websocket.powershellweb.com/Get-WebSocket/
+    .LINK
+        https://learn.microsoft.com/en-us/dotnet/api/system.net.websockets.clientwebsocket?wt.mc_id=MVP_321542
+    .LINK
+        https://learn.microsoft.com/en-us/dotnet/api/system.net.httplistener?wt.mc_id=MVP_321542
     .EXAMPLE
         # Create a WebSocket job that connects to a WebSocket and outputs the results.
         Get-WebSocket -SocketUrl "wss://localhost:9669/" 
@@ -107,6 +113,7 @@ function Get-WebSocket {
             Group |
             Sort Count -Descending |
             Select -First 10
+    
     #>
     [CmdletBinding(
         PositionalBinding=$false,
