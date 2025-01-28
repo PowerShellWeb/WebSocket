@@ -1146,7 +1146,7 @@ function Get-WebSocket {
         # So, start off by capturing $_
         $inputObject = $_
         # If the input was a job, we might remap a parameter
-        if ($inputObject -is 'ThreadJob.ThreadJob') {
+        if ($inputObject -is 'Management.Automation.Job') {
             if ($inputObject.WebSocket -is [Net.WebSockets.ClientWebSocket] -and 
                 $inputObject.SocketUrl) {
                 $SocketUrl = $inputObject.SocketUrl
