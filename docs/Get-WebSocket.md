@@ -370,6 +370,13 @@ The subprotocol used by the websocket.  If not provided, this will default to `j
 |----------|--------|--------|---------------------|
 |`[String]`|false   |named   |true (ByPropertyName)|
 
+#### **NoSubProtocol**
+If set, will not set a subprotocol.  This will only work with certain websocket servers, but will not work with an HTTP Listener WebSocket.
+
+|Type      |Required|Position|PipelineInput        |
+|----------|--------|--------|---------------------|
+|`[Switch]`|false   |named   |true (ByPropertyName)|
+
 #### **Filter**
 One or more filters to apply to the output of the WebSocket.
 These can be strings, regexes, scriptblocks, or commands.
@@ -466,7 +473,7 @@ RunspacePools allow you to limit the scope of the handler to a pool of runspaces
 
 ### Syntax
 ```PowerShell
-Get-WebSocket [[-SocketUrl] <Uri>] [-QueryParameter <IDictionary>] [-Handler <ScriptBlock>] [-ForwardEvent] [-Variable <IDictionary>] [-Header <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-Broadcast <PSObject>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Authenticate <PSObject>] [-Handshake <PSObject>] [-Watch] [-RawText] [-Binary] [-Force] [-SubProtocol <String>] [-Filter <PSObject[]>] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-PSTypeName <String[]>] [-Maximum <Int64>] [-ThrottleLimit <Int32>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [-IncludeTotalCount] [-Skip <UInt64>] [-First <UInt64>] [<CommonParameters>]
+Get-WebSocket [[-SocketUrl] <Uri>] [-QueryParameter <IDictionary>] [-Handler <ScriptBlock>] [-ForwardEvent] [-Variable <IDictionary>] [-Header <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-Broadcast <PSObject>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Authenticate <PSObject>] [-Handshake <PSObject>] [-Watch] [-RawText] [-Binary] [-Force] [-SubProtocol <String>] [-NoSubProtocol] [-Filter <PSObject[]>] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-PSTypeName <String[]>] [-Maximum <Int64>] [-ThrottleLimit <Int32>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [-IncludeTotalCount] [-Skip <UInt64>] [-First <UInt64>] [<CommonParameters>]
 ```
 ```PowerShell
 Get-WebSocket -RootUrl <String[]> [-Route <IDictionary>] [-HTML <String>] [-PaletteName <String>] [-GoogleFont <String>] [-CodeFont <String>] [-JavaScript <String[]>] [-ImportMap <IDictionary>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Header <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-Broadcast <PSObject>] [-Force] [-TimeOut <TimeSpan>] [-Maximum <Int64>] [-ThrottleLimit <Int32>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [-IncludeTotalCount] [-Skip <UInt64>] [-First <UInt64>] [<CommonParameters>]
