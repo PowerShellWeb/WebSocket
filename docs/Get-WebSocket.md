@@ -16,6 +16,15 @@ If the `-Watch` parameter is provided, will output a continous stream of objects
 
 ---
 
+### Related Links
+* [https://websocket.powershellweb.com/Get-WebSocket/](https://websocket.powershellweb.com/Get-WebSocket/)
+
+* [https://learn.microsoft.com/en-us/dotnet/api/system.net.websockets.clientwebsocket?wt.mc_id=MVP_321542](https://learn.microsoft.com/en-us/dotnet/api/system.net.websockets.clientwebsocket?wt.mc_id=MVP_321542)
+
+* [https://learn.microsoft.com/en-us/dotnet/api/system.net.httplistener?wt.mc_id=MVP_321542](https://learn.microsoft.com/en-us/dotnet/api/system.net.httplistener?wt.mc_id=MVP_321542)
+
+---
+
 ### Examples
 Create a WebSocket job that connects to a WebSocket and outputs the results.
 
