@@ -8,7 +8,7 @@
     Description = 'Work with WebSockets in PowerShell'
     FunctionsToExport = @('Get-WebSocket')
     AliasesToExport = @('WebSocket','ws','wss')
-    FormatsToProcess = @('WebSocket.format.ps1')
+    FormatsToProcess = @('WebSocket.format.ps1xml')
     PrivateData = @{
         PSData = @{
             Tags = @('WebSocket', 'WebSockets', 'Networking', 'Web')
