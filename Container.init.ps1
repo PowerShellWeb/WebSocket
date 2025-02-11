@@ -10,19 +10,16 @@
     # Thank you Microsoft!  Thank you PowerShell!  Thank you Docker!
     FROM mcr.microsoft.com/powershell
     # Set the shell to PowerShell (thanks again, Docker!)
-    SHELL ["/bin/pwsh", "-nologo", "-command"]
-    # Run the initialization script.  This will do all remaining initialization in a single layer.
-    RUN --mount=type=bind,src=./,target=/Initialize ./Initialize/Container.init.ps1
+    # Copy the module into the container
+    RUN --mount=type=bind,src=./,target=/Initialize /bin/pwsh -nologo -command /Initialize/Container.init.ps1
+    # Set the entrypoint to the script we just created.
+    ENTRYPOINT [ "/bin/pwsh","-nologo","-noexit","-file","/Container.start.ps1" ]
     ~~~
     
     The scripts arguments can be provided with either an `ARG` or `ENV` instruction in the Dockerfile.
-.NOTES
-    Did you know that in PowerShell you can 'use' namespaces that do not really exist?
-    This seems like a nice way to describe a relationship to a container image.
-    That is why this file is using the namespace 'mcr.microsoft.com/powershell'.
-    (this does nothing, but most likely will be used in the future)
 #>
-using namespace 'mcr.microsoft.com/powershell AS powerShell'
+
+#use container mcr.microsoft.com/powershell
 
 param(
 # The name of the module to be installed.
