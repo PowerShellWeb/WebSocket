@@ -29,14 +29,15 @@ If the `-Watch` parameter is provided, will output a continous stream of objects
 Create a WebSocket job that connects to a WebSocket and outputs the results.
 
 ```PowerShell
-Get-WebSocket -SocketUrl "wss://localhost:9669/"
+$socketServer = Get-WebSocket -RootUrl "http://localhost:8387/" -HTML "<h1>WebSocket Server</h1>"
+$socketClient = Get-WebSocket -SocketUrl "ws://localhost:8387/"
 ```
 Get is the default verb, so we can just say WebSocket.
 `-Watch` will output a continous stream of objects from the websocket.
-For example, let's Watch BlueSky, but just the text.        
+For example, let's Watch BlueSky, but just the text 
 
 ```PowerShell
-websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch |
+websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch -Maximum 1kb |
     % { 
         $_.commit.record.text
     }
@@ -50,22 +51,25 @@ $blueSkySocketUrl = "wss://jetstream2.us-$(
     "wantedCollections=app.bsky.feed.post"
 ) -join '&')"
 websocket $blueSkySocketUrl -Watch | 
-    % { Write-Host "$(' ' * (Get-Random -Max 10))$($_.commit.record.text)$($(' ' * (Get-Random -Max 10)))"}
+    % { Write-Host "$(' ' * (Get-Random -Max 10))$($_.commit.record.text)$($(' ' * (Get-Random -Max 10)))"} -Max 1kb
 ```
-> EXAMPLE 4
+Watch continuously in a background job.
 
 ```PowerShell
 websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post
 ```
-> EXAMPLE 5
+Watch the first message in -Debug mode.  
+This allows you to literally debug the WebSocket messages as they are encountered.
 
 ```PowerShell
-websocket wss://jetstream2.us-west.bsky.network/subscribe -QueryParameter @{ wantedCollections = 'app.bsky.feed.post' } -Max 1 -Debug
+websocket wss://jetstream2.us-west.bsky.network/subscribe -QueryParameter @{
+    wantedCollections = 'app.bsky.feed.post'
+} -Max 1 -Debug
 ```
 Watch BlueSky, but just the emoji
 
 ```PowerShell
-websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |
+websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail -Max 1kb |
     Foreach-Object {
         $in = $_
         if ($in.commit.record.text -match '[\p{IsHighSurrogates}\p{IsLowSurrogates}]+') {
