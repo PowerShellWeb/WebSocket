@@ -37,32 +37,32 @@
     {
       "Title": "EXAMPLE 1",
       "Markdown": "Create a WebSocket job that connects to a WebSocket and outputs the results.",
-      "Code": "Get-WebSocket -SocketUrl \"wss://localhost:9669/\""
+      "Code": "$socketServer = Get-WebSocket -RootUrl \"http://localhost:8387/\" -HTML \"<h1>WebSocket Server</h1>\"\n$socketClient = Get-WebSocket -SocketUrl \"ws://localhost:8387/\""
     },
     {
       "Title": "EXAMPLE 2",
-      "Markdown": "Get is the default verb, so we can just say WebSocket.\n`-Watch` will output a continous stream of objects from the websocket.\nFor example, let's Watch BlueSky, but just the text.        ",
-      "Code": "websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch |\n    % { \n        $_.commit.record.text\n    }"
+      "Markdown": "Get is the default verb, so we can just say WebSocket.\n`-Watch` will output a continous stream of objects from the websocket.\nFor example, let's Watch BlueSky, but just the text ",
+      "Code": "websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch -Maximum 1kb |\n    % { \n        $_.commit.record.text\n    }"
     },
     {
       "Title": "EXAMPLE 3",
       "Markdown": "Watch BlueSky, but just the text and spacing",
-      "Code": "$blueSkySocketUrl = \"wss://jetstream2.us-$(\n    'east','west'|Get-Random\n).bsky.network/subscribe?$(@(\n    \"wantedCollections=app.bsky.feed.post\"\n) -join '&')\"\nwebsocket $blueSkySocketUrl -Watch | \n    % { Write-Host \"$(' ' * (Get-Random -Max 10))$($_.commit.record.text)$($(' ' * (Get-Random -Max 10)))\"}"
+      "Code": "$blueSkySocketUrl = \"wss://jetstream2.us-$(\n    'east','west'|Get-Random\n).bsky.network/subscribe?$(@(\n    \"wantedCollections=app.bsky.feed.post\"\n) -join '&')\"\nwebsocket $blueSkySocketUrl -Watch | \n    % { Write-Host \"$(' ' * (Get-Random -Max 10))$($_.commit.record.text)$($(' ' * (Get-Random -Max 10)))\"} -Max 1kb"
     },
     {
       "Title": "EXAMPLE 4",
-      "Markdown": "",
+      "Markdown": "Watch continuously in a background job.",
       "Code": "websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post"
     },
     {
       "Title": "EXAMPLE 5",
-      "Markdown": "",
-      "Code": "websocket wss://jetstream2.us-west.bsky.network/subscribe -QueryParameter @{ wantedCollections = 'app.bsky.feed.post' } -Max 1 -Debug"
+      "Markdown": "Watch the first message in -Debug mode.  \nThis allows you to literally debug the WebSocket messages as they are encountered.",
+      "Code": "websocket wss://jetstream2.us-west.bsky.network/subscribe -QueryParameter @{\n    wantedCollections = 'app.bsky.feed.post'\n} -Max 1 -Debug"
     },
     {
       "Title": "EXAMPLE 6",
       "Markdown": "Watch BlueSky, but just the emoji",
-      "Code": "websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |\n    Foreach-Object {\n        $in = $_\n        if ($in.commit.record.text -match '[\\p{IsHighSurrogates}\\p{IsLowSurrogates}]+') {\n            Write-Host $matches.0 -NoNewline\n        }\n    }"
+      "Code": "websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail -Max 1kb |\n    Foreach-Object {\n        $in = $_\n        if ($in.commit.record.text -match '[\\p{IsHighSurrogates}\\p{IsLowSurrogates}]+') {\n            Write-Host $matches.0 -NoNewline\n        }\n    }"
     },
     {
       "Title": "EXAMPLE 7",
