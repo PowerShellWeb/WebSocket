@@ -16,12 +16,13 @@ function Get-WebSocket {
         https://learn.microsoft.com/en-us/dotnet/api/system.net.httplistener?wt.mc_id=MVP_321542
     .EXAMPLE
         # Create a WebSocket job that connects to a WebSocket and outputs the results.
-        Get-WebSocket -SocketUrl "wss://localhost:9669/" 
+        $socketServer = Get-WebSocket -RootUrl "http://localhost:8387/" -HTML "<h1>WebSocket Server</h1>"
+        $socketClient = Get-WebSocket -SocketUrl "ws://localhost:8387/"
     .EXAMPLE
         # Get is the default verb, so we can just say WebSocket.
         # `-Watch` will output a continous stream of objects from the websocket.
-        # For example, let's Watch BlueSky, but just the text.        
-        websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch |
+        # For example, let's Watch BlueSky, but just the text 
+        websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch -Maximum 1kb |
             % { 
                 $_.commit.record.text
             }
@@ -33,14 +34,19 @@ function Get-WebSocket {
             "wantedCollections=app.bsky.feed.post"
         ) -join '&')"
         websocket $blueSkySocketUrl -Watch | 
-            % { Write-Host "$(' ' * (Get-Random -Max 10))$($_.commit.record.text)$($(' ' * (Get-Random -Max 10)))"}
-    .EXAMPLE        
+            % { Write-Host "$(' ' * (Get-Random -Max 10))$($_.commit.record.text)$($(' ' * (Get-Random -Max 10)))"} -Max 1kb
+    .EXAMPLE
+        # Watch continuously in a background job.
         websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post
     .EXAMPLE
-        websocket wss://jetstream2.us-west.bsky.network/subscribe -QueryParameter @{ wantedCollections = 'app.bsky.feed.post' } -Max 1 -Debug
+        # Watch the first message in -Debug mode.  
+        # This allows you to literally debug the WebSocket messages as they are encountered.
+        websocket wss://jetstream2.us-west.bsky.network/subscribe -QueryParameter @{
+            wantedCollections = 'app.bsky.feed.post'
+        } -Max 1 -Debug
     .EXAMPLE
         # Watch BlueSky, but just the emoji
-        websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |
+        websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail -Max 1kb |
             Foreach-Object {
                 $in = $_
                 if ($in.commit.record.text -match '[\p{IsHighSurrogates}\p{IsLowSurrogates}]+') {
@@ -113,7 +119,6 @@ function Get-WebSocket {
             Group |
             Sort Count -Descending |
             Select -First 10
-    
     #>
     [CmdletBinding(
         PositionalBinding=$false,
@@ -1231,7 +1236,9 @@ function Get-WebSocket {
                     $httpListenerJob = $existingJob
                     $httpListener = $existingJob.HttpListener
                 } else {
-                    $httpListenerJob = Start-ThreadJob -ScriptBlock $SocketServerJob -Name "$RootUrl" -ArgumentList $Variable @StartThreadJobSplat
+                    $httpListenerJob = Start-ThreadJob -ScriptBlock $SocketServerJob -Name "$RootUrl" -ArgumentList $Variable @StartThreadJobSplat                    
+                    $httpListenerJob.pstypenames.insert(0, 'WebSocket.ThreadJob')
+                    $httpListenerJob.pstypenames.insert(0, 'WebSocket.Server.ThreadJob')
                 }
             }
             
@@ -1322,6 +1329,7 @@ function Get-WebSocket {
                 )
             }
             $webSocketJob.pstypenames.insert(0, 'WebSocket.ThreadJob')
+            $webSocketJob.pstypenames.insert(0, 'WebSocket.Client.ThreadJob')
         }
 
         # If we're broadcasting a message
