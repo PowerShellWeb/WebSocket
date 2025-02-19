@@ -1,5 +1,9 @@
 <div align='center'>
     <img alt='WebSocket Logo (Animated)' style='width:33%' src='Assets/WebSocket-Animated.svg' />
+    <br />
+    <a href='https://www.powershellgallery.com/packages/WebSocket/'>
+        <img src='https://img.shields.io/powershellgallery/dt/WebSocket' />
+    </a>
 </div>
 
 # WebSocket
