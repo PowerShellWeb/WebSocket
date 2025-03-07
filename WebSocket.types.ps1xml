@@ -4,6 +4,17 @@
     <Name>WebSocket.Client.ThreadJob</Name>
     <Members>
       <ScriptMethod>
+        <Name>Pop</Name>
+        <Script>
+                        param()
+
+if ($this.Output.Count -gt 0) {
+    $this.Output[0]
+    $this.Output.RemoveAt(0)    
+}
+                    </Script>
+      </ScriptMethod>
+      <ScriptMethod>
         <Name>Send</Name>
         <Script>
                         &lt;#
@@ -52,6 +63,17 @@ if ($message -is [Collections.IList] -and $message -isnot [byte[]]) {
   <Type>
     <Name>WebSocket.ThreadJob</Name>
     <Members>
+      <ScriptMethod>
+        <Name>Pop</Name>
+        <Script>
+                        param()
+
+if ($this.Output.Count -gt 0) {
+    $this.Output[0]
+    $this.Output.RemoveAt(0)    
+}
+                    </Script>
+      </ScriptMethod>
     </Members>
   </Type>
 </Types>
