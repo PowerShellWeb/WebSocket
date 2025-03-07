@@ -21,6 +21,12 @@ if ($this.Output.Count -gt 0) {
                     </Script>
       </ScriptMethod>
       <ScriptMethod>
+        <Name>Receive</Name>
+        <Script>
+                        $this | Receive-Job -Keep -ErrorAction Ignore
+                    </Script>
+      </ScriptMethod>
+      <ScriptMethod>
         <Name>Send</Name>
         <Script>
                         &lt;#
@@ -84,6 +90,12 @@ if ($this.Output.Count -gt 0) {
     $this.Output[0]
     $this.Output.RemoveAt(0)    
 }
+                    </Script>
+      </ScriptMethod>
+      <ScriptMethod>
+        <Name>Receive</Name>
+        <Script>
+                        $this | Receive-Job -Keep -ErrorAction Ignore
                     </Script>
       </ScriptMethod>
       <ScriptMethod>
@@ -181,6 +193,12 @@ if ($this.Output.Count -gt 0) {
     $this.Output[0]
     $this.Output.RemoveAt(0)    
 }
+                    </Script>
+      </ScriptMethod>
+      <ScriptMethod>
+        <Name>Receive</Name>
+        <Script>
+                        $this | Receive-Job -Keep -ErrorAction Ignore
                     </Script>
       </ScriptMethod>
     </Members>
