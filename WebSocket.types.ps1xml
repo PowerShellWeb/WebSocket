@@ -4,6 +4,12 @@
     <Name>WebSocket.Client.ThreadJob</Name>
     <Members>
       <ScriptMethod>
+        <Name>Clear</Name>
+        <Script>
+                        $this.Output.Clear()
+                    </Script>
+      </ScriptMethod>
+      <ScriptMethod>
         <Name>Pop</Name>
         <Script>
                         param()
@@ -63,6 +69,12 @@ if ($message -is [Collections.IList] -and $message -isnot [byte[]]) {
   <Type>
     <Name>WebSocket.Server.ThreadJob</Name>
     <Members>
+      <ScriptMethod>
+        <Name>Clear</Name>
+        <Script>
+                        $this.Output.Clear()
+                    </Script>
+      </ScriptMethod>
       <ScriptMethod>
         <Name>Pop</Name>
         <Script>
@@ -154,6 +166,12 @@ if ($message -is [Collections.IList] -and $message -isnot [byte[]]) {
   <Type>
     <Name>WebSocket.ThreadJob</Name>
     <Members>
+      <ScriptMethod>
+        <Name>Clear</Name>
+        <Script>
+                        $this.Output.Clear()
+                    </Script>
+      </ScriptMethod>
       <ScriptMethod>
         <Name>Pop</Name>
         <Script>
