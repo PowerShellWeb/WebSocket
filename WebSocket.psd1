@@ -9,6 +9,7 @@
     FunctionsToExport = @('Get-WebSocket')
     AliasesToExport = @('WebSocket','ws','wss')
     FormatsToProcess = @('WebSocket.format.ps1xml')
+    TypesToProcess = @('WebSocket.types.ps1xml')
     PrivateData = @{
         PSData = @{
             Tags = @('WebSocket', 'WebSockets', 'Networking', 'Web')
