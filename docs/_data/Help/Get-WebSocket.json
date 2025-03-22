@@ -37,7 +37,7 @@
     {
       "Title": "EXAMPLE 1",
       "Markdown": "Create a WebSocket job that connects to a WebSocket and outputs the results.",
-      "Code": "$socketServer = Get-WebSocket -RootUrl \"http://localhost:8387/\" -HTML \"<h1>WebSocket Server</h1>\"\n$socketClient = Get-WebSocket -SocketUrl \"ws://localhost:8387/\""
+      "Code": "$socketServer = Get-WebSocket -RootUrl \"http://localhost:8387/\" -HTML \"<h1>WebSocket Server</h1>\"\n$socketClient = Get-WebSocket -SocketUrl \"ws://localhost:8387/\"\nforeach ($n in 1..10) { $socketServer.Send(@{n=Get-Random}) }\n$socketClient | Receive-Job -Keep"
     },
     {
       "Title": "EXAMPLE 2",
