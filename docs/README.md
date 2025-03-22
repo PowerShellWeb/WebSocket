@@ -52,6 +52,8 @@ To stop watching a websocket, simply stop the background job.
 # Create a WebSocket job that connects to a WebSocket and outputs the results.
 $socketServer = Get-WebSocket -RootUrl "http://localhost:8387/" -HTML "<h1>WebSocket Server</h1>"
 $socketClient = Get-WebSocket -SocketUrl "ws://localhost:8387/"
+foreach ($n in 1..10) { $socketServer.Send(@{n=Get-Random}) }
+$socketClient | Receive-Job -Keep
 ~~~
  #### Get-WebSocket Example 2
 
