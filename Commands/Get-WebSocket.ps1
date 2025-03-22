@@ -18,6 +18,8 @@ function Get-WebSocket {
         # Create a WebSocket job that connects to a WebSocket and outputs the results.
         $socketServer = Get-WebSocket -RootUrl "http://localhost:8387/" -HTML "<h1>WebSocket Server</h1>"
         $socketClient = Get-WebSocket -SocketUrl "ws://localhost:8387/"
+        foreach ($n in 1..10) { $socketServer.Send(@{n=Get-Random}) }
+        $socketClient | Receive-Job -Keep
     .EXAMPLE
         # Get is the default verb, so we can just say WebSocket.
         # `-Watch` will output a continous stream of objects from the websocket.
@@ -918,7 +920,7 @@ function Get-WebSocket {
                 # If the request is a websocket request
                 if ($Request.IsWebSocketRequest) {
                     # we will change the event identifier to a websocket scheme.
-                    $eventIdentifier = $eventIdentifier -replace '^http', 'ws'                    
+                    $eventIdentifier = $eventIdentifier -replace '^http', 'ws'
                     # and call the `AcceptWebSocketAsync` method to upgrade the connection.
                     $acceptWebSocket = $context.AcceptWebSocketAsync('json')
                     # Once again, we'll use a tight loop to wait for the upgrade to complete or fail.
