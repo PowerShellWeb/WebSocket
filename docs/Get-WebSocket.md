@@ -31,6 +31,8 @@ Create a WebSocket job that connects to a WebSocket and outputs the results.
 ```PowerShell
 $socketServer = Get-WebSocket -RootUrl "http://localhost:8387/" -HTML "<h1>WebSocket Server</h1>"
 $socketClient = Get-WebSocket -SocketUrl "ws://localhost:8387/"
+foreach ($n in 1..10) { $socketServer.Send(@{n=Get-Random}) }
+$socketClient | Receive-Job -Keep
 ```
 Get is the default verb, so we can just say WebSocket.
 `-Watch` will output a continous stream of objects from the websocket.
