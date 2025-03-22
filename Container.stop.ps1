@@ -6,4 +6,4 @@
 
     It can be used to perform any necessary cleanup before the container is stopped.
 #>
-"Container now exiting, thank you for using WebSocket!" | Out-Host
+"Container now exiting, thank you for using $env:ModuleName!" | Out-Host

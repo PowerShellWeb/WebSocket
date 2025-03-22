@@ -1,5 +1,5 @@
 # Thank you Microsoft!  Thank you PowerShell!  Thank you Docker!
-FROM mcr.microsoft.com/powershell AS powershell
+FROM mcr.microsoft.com/powershell
 
 # Set the module name to the name of the module we are building
 ENV ModuleName=WebSocket

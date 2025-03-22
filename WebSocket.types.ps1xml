@@ -1,0 +1,206 @@
+<!-- Generated with EZOut 2.0.6: Install-Module EZOut or https://github.com/StartAutomating/EZOut -->
+<Types>
+  <Type>
+    <Name>WebSocket.Client.ThreadJob</Name>
+    <Members>
+      <ScriptMethod>
+        <Name>Clear</Name>
+        <Script>
+                        $this.Output.Clear()
+                    </Script>
+      </ScriptMethod>
+      <ScriptMethod>
+        <Name>Pop</Name>
+        <Script>
+                        param()
+
+if ($this.Output.Count -gt 0) {
+    $this.Output[0]
+    $this.Output.RemoveAt(0)    
+}
+                    </Script>
+      </ScriptMethod>
+      <ScriptMethod>
+        <Name>Receive</Name>
+        <Script>
+                        $this | Receive-Job -Keep -ErrorAction Ignore
+                    </Script>
+      </ScriptMethod>
+      <ScriptMethod>
+        <Name>Send</Name>
+        <Script>
+                        &lt;#
+.SYNOPSIS
+    Sends a WebSocket message.
+.DESCRIPTION
+    Sends a message to a WebSocket server.
+#&gt;
+param(
+[PSObject]
+$Message
+)
+
+function sendMessage {
+    param([Parameter(ValueFromPipeline)]$msg)
+    process {
+        if ($msg -is [byte[]]) {
+            [ArraySegment[byte]]$messageSegment = [ArraySegment[byte]]::new($msg)
+            if ($null -ne $messageSegment -and $this.WebSocket.SendAsync) {
+                $this.WebSocket.SendAsync($messageSegment, 'Binary', 'EndOfMessage',[Threading.Cancellationtoken]::None)
+            }
+        } else {
+            $jsonMessage = ConvertTo-Json -InputObject $msg
+            $messageSegment = [ArraySegment[byte]]::new($OutputEncoding.GetBytes($jsonMessage))
+            if ($null -ne $jsonMessage -and $this.WebSocket.SendAsync) {
+                $this.WebSocket.SendAsync($messageSegment, 'Text', 'EndOfMessage', [Threading.Cancellationtoken]::None)
+            }
+        }
+    }
+}
+
+if ($message -is [Collections.IList] -and $message -isnot [byte[]]) {
+    $Message | sendMessage
+} else {
+    sendMessage -msg $Message
+}
+
+
+
+
+
+                    </Script>
+      </ScriptMethod>
+    </Members>
+  </Type>
+  <Type>
+    <Name>WebSocket.Server.ThreadJob</Name>
+    <Members>
+      <ScriptMethod>
+        <Name>Clear</Name>
+        <Script>
+                        $this.Output.Clear()
+                    </Script>
+      </ScriptMethod>
+      <ScriptMethod>
+        <Name>Pop</Name>
+        <Script>
+                        param()
+
+if ($this.Output.Count -gt 0) {
+    $this.Output[0]
+    $this.Output.RemoveAt(0)    
+}
+                    </Script>
+      </ScriptMethod>
+      <ScriptMethod>
+        <Name>Receive</Name>
+        <Script>
+                        $this | Receive-Job -Keep -ErrorAction Ignore
+                    </Script>
+      </ScriptMethod>
+      <ScriptMethod>
+        <Name>Send</Name>
+        <Script>
+                        &lt;#
+.SYNOPSIS
+    Sends a WebSocket message.
+.DESCRIPTION
+    Sends a message from a WebSocket server.
+#&gt;
+param(
+[PSObject]
+$Message,
+
+[string]
+$Pattern
+)
+
+function sendMessage {
+    param([Parameter(ValueFromPipeline)]$msg, [PSObject[]]$Sockets)
+    process {
+        if ($msg -is [byte[]]) {
+            $messageSegment = [ArraySegment[byte]]::new($msg)
+            foreach ($socket in $sockets) {
+                if ($null -ne $messageSegment -and $socket.SendAsync) {
+                    $null = $socket.SendAsync($messageSegment, 'Binary', 'EndOfMessage',[Threading.Cancellationtoken]::None)
+                }    
+            }
+            
+        } else {
+            $jsonMessage = ConvertTo-Json -InputObject $msg
+            $messageSegment = [ArraySegment[byte]]::new($OutputEncoding.GetBytes($jsonMessage))
+            foreach ($socket in $sockets) {
+                if ($null -ne $messageSegment -and $socket.SendAsync) {
+                    $null = $socket.SendAsync($messageSegment, 'Binary', 'EndOfMessage',[Threading.Cancellationtoken]::None)
+                }    
+            }
+        }
+        $msg
+    }
+}
+
+$patternAsRegex = $pattern -as [regex]
+$socketList = @(    
+    foreach ($socketConnection in $this.HttpListener.SocketRequests.Values) {                
+        if (
+            $patternAsRegex -and 
+            $socketConnection.WebSocketContext.RequestUri -match $pattern
+        ) {
+            $socketConnection.WebSocket
+        }
+        elseif (
+            $pattern -and 
+            $socketConnection.WebSocketContext.RequestUri -like $pattern
+        ) {
+            $socketConnection.WebSocket
+        }
+        else {
+            $socketConnection.WebSocket
+        }
+    }
+)
+
+
+if ($message -is [Collections.IList] -and $message -isnot [byte[]]) {
+    $Message | sendMessage -Sockets $socketList
+} else {
+    sendMessage -msg $Message -Sockets $socketList
+}
+
+
+
+
+
+                    </Script>
+      </ScriptMethod>
+    </Members>
+  </Type>
+  <Type>
+    <Name>WebSocket.ThreadJob</Name>
+    <Members>
+      <ScriptMethod>
+        <Name>Clear</Name>
+        <Script>
+                        $this.Output.Clear()
+                    </Script>
+      </ScriptMethod>
+      <ScriptMethod>
+        <Name>Pop</Name>
+        <Script>
+                        param()
+
+if ($this.Output.Count -gt 0) {
+    $this.Output[0]
+    $this.Output.RemoveAt(0)    
+}
+                    </Script>
+      </ScriptMethod>
+      <ScriptMethod>
+        <Name>Receive</Name>
+        <Script>
+                        $this | Receive-Job -Keep -ErrorAction Ignore
+                    </Script>
+      </ScriptMethod>
+    </Members>
+  </Type>
+</Types>

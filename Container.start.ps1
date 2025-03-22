@@ -24,7 +24,8 @@
     That is why this file is using the namespace 'mcr.microsoft.com/powershell'.
     (this does nothing, but most likely will be used in the future)
 #>
-using namespace 'ghcr.io/powershellweb/websocket'
+
+#use container ghcr.io/powershellweb/websocket
 
 param()
 
@@ -62,7 +63,7 @@ if ($args) {
         # If a single drive is mounted, start the socket files.
         $webSocketFiles = $mountedFolders | Get-ChildItem -Filter *.WebSocket.ps1 
         foreach ($webSocketFile in $webSocketFiles) {
-            Start-ThreadJob -Name $webSocketFile.Name -ScriptBlock {param($webSocketFile) . $using:webSocketFile.FullName } -ArgumentList $webSocketFile
+            Start-ThreadJob -Name $webSocketFile.Name -ScriptBlock { . $using:webSocketFile.FullName }
             . $webSocketFile.FullName
         }
     }

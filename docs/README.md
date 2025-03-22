@@ -1,5 +1,9 @@
 <div align='center'>
     <img alt='WebSocket Logo (Animated)' style='width:33%' src='Assets/WebSocket-Animated.svg' />
+    <br />
+    <a href='https://www.powershellgallery.com/packages/WebSocket/'>
+        <img src='https://img.shields.io/powershellgallery/dt/WebSocket' />
+    </a>
 </div>
 
 # WebSocket
@@ -46,15 +50,18 @@ To stop watching a websocket, simply stop the background job.
 
 ~~~powershell
 # Create a WebSocket job that connects to a WebSocket and outputs the results.
-Get-WebSocket -WebSocketUri "wss://localhost:9669/"
+$socketServer = Get-WebSocket -RootUrl "http://localhost:8387/" -HTML "<h1>WebSocket Server</h1>"
+$socketClient = Get-WebSocket -SocketUrl "ws://localhost:8387/"
+foreach ($n in 1..10) { $socketServer.Send(@{n=Get-Random}) }
+$socketClient | Receive-Job -Keep
 ~~~
  #### Get-WebSocket Example 2
 
 ~~~powershell
 # Get is the default verb, so we can just say WebSocket.
 # `-Watch` will output a continous stream of objects from the websocket.
-# For example, let's Watch BlueSky, but just the text.        
-websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch |
+# For example, let's Watch BlueSky, but just the text 
+websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch -Maximum 1kb |
     % { 
         $_.commit.record.text
     }
@@ -69,18 +76,28 @@ $blueSkySocketUrl = "wss://jetstream2.us-$(
     "wantedCollections=app.bsky.feed.post"
 ) -join '&')"
 websocket $blueSkySocketUrl -Watch | 
-    % { Write-Host "$(' ' * (Get-Random -Max 10))$($_.commit.record.text)$($(' ' * (Get-Random -Max 10)))"}
+    % { Write-Host "$(' ' * (Get-Random -Max 10))$($_.commit.record.text)$($(' ' * (Get-Random -Max 10)))"} -Max 1kb
 ~~~
  #### Get-WebSocket Example 4
 
 ~~~powershell
+# Watch continuously in a background job.
 websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post
 ~~~
  #### Get-WebSocket Example 5
 
 ~~~powershell
+# Watch the first message in -Debug mode.  
+# This allows you to literally debug the WebSocket messages as they are encountered.
+websocket wss://jetstream2.us-west.bsky.network/subscribe -QueryParameter @{
+    wantedCollections = 'app.bsky.feed.post'
+} -Max 1 -Debug
+~~~
+ #### Get-WebSocket Example 6
+
+~~~powershell
 # Watch BlueSky, but just the emoji
-websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |
+websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail -Max 1kb |
     Foreach-Object {
         $in = $_
         if ($in.commit.record.text -match '[\p{IsHighSurrogates}\p{IsLowSurrogates}]+') {
@@ -88,7 +105,7 @@ websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.f
         }
     }
 ~~~
- #### Get-WebSocket Example 6
+ #### Get-WebSocket Example 7
 
 ~~~powershell
 $emojiPattern = '[\p{IsHighSurrogates}\p{IsLowSurrogates}\p{IsVariationSelectors}\p{IsCombiningHalfMarks}]+)'
@@ -102,7 +119,7 @@ websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.
         }
     }
 ~~~
- #### Get-WebSocket Example 7
+ #### Get-WebSocket Example 8
 
 ~~~powershell
 websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch |
@@ -113,17 +130,19 @@ websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.
         $_.commit.record.embed.external.uri
     }
 ~~~
- #### Get-WebSocket Example 8
+ #### Get-WebSocket Example 9
 
 ~~~powershell
 # BlueSky, but just the hashtags
-websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{
+websocket wss://jetstream2.us-west.bsky.network/subscribe -QueryParameter @{
+    wantedCollections = 'app.bsky.feed.post'
+} -WatchFor @{
     {$webSocketoutput.commit.record.text -match "\#\w+"}={
         $matches.0
     }                
-}
+} -Maximum 1kb
 ~~~
- #### Get-WebSocket Example 9
+ #### Get-WebSocket Example 10
 
 ~~~powershell
 # BlueSky, but just the hashtags (as links)
@@ -137,7 +156,7 @@ websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.
     }
 }
 ~~~
- #### Get-WebSocket Example 10
+ #### Get-WebSocket Example 11
 
 ~~~powershell
 websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{
@@ -149,7 +168,7 @@ websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.
     }
 }
 ~~~
- #### Get-WebSocket Example 11
+ #### Get-WebSocket Example 12
 
 ~~~powershell
 # We can decorate a type returned from a WebSocket, allowing us to add additional properties.

@@ -16,18 +16,30 @@ If the `-Watch` parameter is provided, will output a continous stream of objects
 
 ---
 
+### Related Links
+* [https://websocket.powershellweb.com/Get-WebSocket/](https://websocket.powershellweb.com/Get-WebSocket/)
+
+* [https://learn.microsoft.com/en-us/dotnet/api/system.net.websockets.clientwebsocket?wt.mc_id=MVP_321542](https://learn.microsoft.com/en-us/dotnet/api/system.net.websockets.clientwebsocket?wt.mc_id=MVP_321542)
+
+* [https://learn.microsoft.com/en-us/dotnet/api/system.net.httplistener?wt.mc_id=MVP_321542](https://learn.microsoft.com/en-us/dotnet/api/system.net.httplistener?wt.mc_id=MVP_321542)
+
+---
+
 ### Examples
 Create a WebSocket job that connects to a WebSocket and outputs the results.
 
 ```PowerShell
-Get-WebSocket -WebSocketUri "wss://localhost:9669/"
+$socketServer = Get-WebSocket -RootUrl "http://localhost:8387/" -HTML "<h1>WebSocket Server</h1>"
+$socketClient = Get-WebSocket -SocketUrl "ws://localhost:8387/"
+foreach ($n in 1..10) { $socketServer.Send(@{n=Get-Random}) }
+$socketClient | Receive-Job -Keep
 ```
 Get is the default verb, so we can just say WebSocket.
 `-Watch` will output a continous stream of objects from the websocket.
-For example, let's Watch BlueSky, but just the text.        
+For example, let's Watch BlueSky, but just the text 
 
 ```PowerShell
-websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch |
+websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch -Maximum 1kb |
     % { 
         $_.commit.record.text
     }
@@ -41,17 +53,25 @@ $blueSkySocketUrl = "wss://jetstream2.us-$(
     "wantedCollections=app.bsky.feed.post"
 ) -join '&')"
 websocket $blueSkySocketUrl -Watch | 
-    % { Write-Host "$(' ' * (Get-Random -Max 10))$($_.commit.record.text)$($(' ' * (Get-Random -Max 10)))"}
+    % { Write-Host "$(' ' * (Get-Random -Max 10))$($_.commit.record.text)$($(' ' * (Get-Random -Max 10)))"} -Max 1kb
 ```
-> EXAMPLE 4
+Watch continuously in a background job.
 
 ```PowerShell
 websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post
 ```
+Watch the first message in -Debug mode.  
+This allows you to literally debug the WebSocket messages as they are encountered.
+
+```PowerShell
+websocket wss://jetstream2.us-west.bsky.network/subscribe -QueryParameter @{
+    wantedCollections = 'app.bsky.feed.post'
+} -Max 1 -Debug
+```
 Watch BlueSky, but just the emoji
 
 ```PowerShell
-websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail |
+websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Tail -Max 1kb |
     Foreach-Object {
         $in = $_
         if ($in.commit.record.text -match '[\p{IsHighSurrogates}\p{IsLowSurrogates}]+') {
@@ -59,7 +79,7 @@ websocket jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.f
         }
     }
 ```
-> EXAMPLE 6
+> EXAMPLE 7
 
 ```PowerShell
 $emojiPattern = '[\p{IsHighSurrogates}\p{IsLowSurrogates}\p{IsVariationSelectors}\p{IsCombiningHalfMarks}]+)'
@@ -73,7 +93,7 @@ websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.
         }
     }
 ```
-> EXAMPLE 7
+> EXAMPLE 8
 
 ```PowerShell
 websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -Watch |
@@ -87,11 +107,13 @@ websocket wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.
 BlueSky, but just the hashtags
 
 ```PowerShell
-websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{
+websocket wss://jetstream2.us-west.bsky.network/subscribe -QueryParameter @{
+    wantedCollections = 'app.bsky.feed.post'
+} -WatchFor @{
     {$webSocketoutput.commit.record.text -match "\#\w+"}={
         $matches.0
     }                
-}
+} -Maximum 1kb
 ```
 BlueSky, but just the hashtags (as links)
 
@@ -106,7 +128,7 @@ websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.
     }
 }
 ```
-> EXAMPLE 10
+> EXAMPLE 11
 
 ```PowerShell
 websocket wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post -WatchFor @{
@@ -141,19 +163,97 @@ $somePosts |
 ---
 
 ### Parameters
-#### **WebSocketUri**
-The Uri of the WebSocket to connect to.
+#### **SocketUrl**
+The WebSocket Uri.
 
-|Type   |Required|Position|PipelineInput        |Aliases    |
-|-------|--------|--------|---------------------|-----------|
-|`[Uri]`|false   |1       |true (ByPropertyName)|Url<br/>Uri|
+|Type   |Required|Position|PipelineInput        |Aliases                                      |
+|-------|--------|--------|---------------------|---------------------------------------------|
+|`[Uri]`|false   |1       |true (ByPropertyName)|Url<br/>Uri<br/>WebSocketUri<br/>WebSocketUrl|
+
+#### **RootUrl**
+One or more root urls.
+If these are provided, a WebSocket server will be created with these listener prefixes.
+
+|Type        |Required|Position|PipelineInput        |Aliases                                                                              |
+|------------|--------|--------|---------------------|-------------------------------------------------------------------------------------|
+|`[String[]]`|true    |named   |true (ByPropertyName)|HostHeader<br/>Host<br/>CNAME<br/>ListenerPrefix<br/>ListenerPrefixes<br/>ListenerUrl|
+
+#### **Route**
+A route table for all requests.
+
+|Type           |Required|Position|PipelineInput        |Aliases                                       |
+|---------------|--------|--------|---------------------|----------------------------------------------|
+|`[IDictionary]`|false   |named   |true (ByPropertyName)|Routes<br/>RouteTable<br/>WebHook<br/>WebHooks|
+
+#### **HTML**
+The Default HTML.
+This will be displayed when visiting the root url.
+
+|Type      |Required|Position|PipelineInput        |Aliases                                                     |
+|----------|--------|--------|---------------------|------------------------------------------------------------|
+|`[String]`|false   |named   |true (ByPropertyName)|DefaultHTML<br/>Home<br/>Index<br/>IndexHTML<br/>DefaultPage|
+
+#### **PaletteName**
+The name of the palette to use.  This will include the [4bitcss](https://4bitcss.com) stylesheet.
+
+|Type      |Required|Position|PipelineInput        |Aliases                                 |
+|----------|--------|--------|---------------------|----------------------------------------|
+|`[String]`|false   |named   |true (ByPropertyName)|Palette<br/>ColorScheme<br/>ColorPalette|
+
+#### **GoogleFont**
+The [Google Font](https://fonts.google.com/) name.
+
+|Type      |Required|Position|PipelineInput        |Aliases |
+|----------|--------|--------|---------------------|--------|
+|`[String]`|false   |named   |true (ByPropertyName)|FontName|
+
+#### **CodeFont**
+The Google Font name to use for code blocks.
+(this should be a [monospace font](https://fonts.google.com/?classification=Monospace))
+
+|Type      |Required|Position|PipelineInput        |Aliases                                 |
+|----------|--------|--------|---------------------|----------------------------------------|
+|`[String]`|false   |named   |true (ByPropertyName)|PreFont<br/>CodeFontName<br/>PreFontName|
+
+#### **JavaScript**
+A list of javascript files or urls to include in the content.
+
+|Type        |Required|Position|PipelineInput        |
+|------------|--------|--------|---------------------|
+|`[String[]]`|false   |named   |true (ByPropertyName)|
+
+#### **ImportMap**
+A javascript import map.  This allows you to import javascript modules.
+
+|Type           |Required|Position|PipelineInput        |Aliases                                                        |
+|---------------|--------|--------|---------------------|---------------------------------------------------------------|
+|`[IDictionary]`|false   |named   |true (ByPropertyName)|ImportsJavaScript<br/>JavaScriptImports<br/>JavaScriptImportMap|
+
+#### **QueryParameter**
+A collection of query parameters.
+These will be appended onto the `-SocketUrl`.
+Multiple values for a single parameter will be passed as multiple parameters.
+
+|Type           |Required|Position|PipelineInput        |Aliases                  |
+|---------------|--------|--------|---------------------|-------------------------|
+|`[IDictionary]`|false   |named   |true (ByPropertyName)|QueryParameters<br/>Query|
 
 #### **Handler**
-A ScriptBlock that will handle the output of the WebSocket.
+A ScriptBlock that can handle the output of the WebSocket or the Http Request.
+This may be run in a separate `-Runspace` or `-RunspacePool`.
+The output of the WebSocket or the Context will be passed as an object.
 
 |Type           |Required|Position|PipelineInput|
 |---------------|--------|--------|-------------|
 |`[ScriptBlock]`|false   |named   |false        |
+
+#### **ForwardEvent**
+If set, will forward websocket messages as events.
+Only events that match -Filter will be forwarded.
+
+|Type      |Required|Position|PipelineInput        |Aliases|
+|----------|--------|--------|---------------------|-------|
+|`[Switch]`|false   |named   |true (ByPropertyName)|Forward|
 
 #### **Variable**
 Any variables to declare in the WebSocket job.
@@ -162,6 +262,13 @@ These variables will also be added to the job as properties.
 |Type           |Required|Position|PipelineInput|
 |---------------|--------|--------|-------------|
 |`[IDictionary]`|false   |named   |false        |
+
+#### **Header**
+Any Http Headers to include in the WebSocket request or server response.
+
+|Type           |Required|Position|PipelineInput|Aliases|
+|---------------|--------|--------|-------------|-------|
+|`[IDictionary]`|false   |named   |false        |Headers|
 
 #### **Name**
 The name of the WebSocket job.
@@ -180,9 +287,17 @@ The script to run when the WebSocket job starts.
 #### **BufferSize**
 The buffer size.  Defaults to 16kb.
 
-|Type     |Required|Position|PipelineInput|
-|---------|--------|--------|-------------|
-|`[Int32]`|false   |named   |false        |
+|Type     |Required|Position|PipelineInput        |
+|---------|--------|--------|---------------------|
+|`[Int32]`|false   |named   |true (ByPropertyName)|
+
+#### **Broadcast**
+If provided, will send an object.
+If this is a scriptblock, it will be run and the output will be sent.
+
+|Type        |Required|Position|PipelineInput|Aliases|
+|------------|--------|--------|-------------|-------|
+|`[PSObject]`|false   |named   |false        |Send   |
 
 #### **OnConnect**
 The ScriptBlock to run after connection to a websocket.
@@ -213,6 +328,28 @@ The Scriptblock to run when the WebSocket job produces a warning.
 |---------------|--------|--------|-------------|
 |`[ScriptBlock]`|false   |named   |false        |
 
+#### **Authenticate**
+If provided, will authenticate the WebSocket.
+Many websockets require an initial authentication handshake
+after an initial message is received.    
+This parameter can be either a ScriptBlock or any other object.
+If it is a ScriptBlock, it will be run with the output of the WebSocket passed as the first argument.
+This will run after the socket is connected but before any messages are received.
+
+|Type        |Required|Position|PipelineInput|Aliases                   |
+|------------|--------|--------|-------------|--------------------------|
+|`[PSObject]`|false   |named   |false        |Authorize<br/>HelloMessage|
+
+#### **Handshake**
+If provided, will shake hands after the first websocket message is received.
+This parameter can be either a ScriptBlock or any other object.
+If it is a ScriptBlock, it will be run with the output of the WebSocket passed as the first argument.
+This will run after the socket is connected and the first message is received.
+
+|Type        |Required|Position|PipelineInput|Aliases |
+|------------|--------|--------|-------------|--------|
+|`[PSObject]`|false   |named   |false        |Identify|
+
 #### **Watch**
 If set, will watch the output of the WebSocket job, outputting results continuously instead of outputting a websocket job.
 
@@ -234,64 +371,125 @@ If set, will output the raw bytes that come out of the WebSocket.
 |----------|--------|--------|-------------|---------------------------------------|
 |`[Switch]`|false   |named   |false        |RawByte<br/>RawBytes<br/>Bytes<br/>Byte|
 
+#### **Force**
+If set, will force a new job to be created, rather than reusing an existing job.
+
+|Type      |Required|Position|PipelineInput|
+|----------|--------|--------|-------------|
+|`[Switch]`|false   |named   |false        |
+
+#### **SubProtocol**
+The subprotocol used by the websocket.  If not provided, this will default to `json`.
+
+|Type      |Required|Position|PipelineInput        |
+|----------|--------|--------|---------------------|
+|`[String]`|false   |named   |true (ByPropertyName)|
+
+#### **NoSubProtocol**
+If set, will not set a subprotocol.  This will only work with certain websocket servers, but will not work with an HTTP Listener WebSocket.
+
+|Type      |Required|Position|PipelineInput        |
+|----------|--------|--------|---------------------|
+|`[Switch]`|false   |named   |true (ByPropertyName)|
+
+#### **Filter**
+One or more filters to apply to the output of the WebSocket.
+These can be strings, regexes, scriptblocks, or commands.
+If they are strings or regexes, they will be applied to the raw text.
+If they are scriptblocks, they will be applied to the deserialized JSON.
+These filters will be run within the WebSocket job.
+
+|Type          |Required|Position|PipelineInput        |
+|--------------|--------|--------|---------------------|
+|`[PSObject[]]`|false   |named   |true (ByPropertyName)|
+
 #### **WatchFor**
 If set, will watch the output of a WebSocket job for one or more conditions.
 The conditions are the keys of the dictionary, and can be a regex, a string, or a scriptblock.
 The values of the dictionary are what will happen when a match is found.
 
-|Type           |Required|Position|PipelineInput|Aliases               |
-|---------------|--------|--------|-------------|----------------------|
-|`[IDictionary]`|false   |named   |false        |WhereFor<br/>Wherefore|
+|Type           |Required|Position|PipelineInput        |Aliases               |
+|---------------|--------|--------|---------------------|----------------------|
+|`[IDictionary]`|false   |named   |true (ByPropertyName)|WhereFor<br/>Wherefore|
 
 #### **TimeOut**
-The timeout for the WebSocket connection.  If this is provided, after the timeout elapsed, the WebSocket will be closed.
+The timeout for the WebSocket connection.
+If this is provided, after the timeout elapsed, the WebSocket will be closed.
 
-|Type        |Required|Position|PipelineInput|
-|------------|--------|--------|-------------|
-|`[TimeSpan]`|false   |named   |false        |
+|Type        |Required|Position|PipelineInput        |Aliases |
+|------------|--------|--------|---------------------|--------|
+|`[TimeSpan]`|false   |named   |true (ByPropertyName)|Lifespan|
 
 #### **PSTypeName**
 If provided, will decorate the objects outputted from a websocket job.
 This will only decorate objects converted from JSON.
 
-|Type        |Required|Position|PipelineInput|Aliases                                |
-|------------|--------|--------|-------------|---------------------------------------|
-|`[String[]]`|false   |named   |false        |PSTypeNames<br/>Decorate<br/>Decoration|
+|Type        |Required|Position|PipelineInput        |Aliases                                |
+|------------|--------|--------|---------------------|---------------------------------------|
+|`[String[]]`|false   |named   |true (ByPropertyName)|PSTypeNames<br/>Decorate<br/>Decoration|
 
 #### **Maximum**
 The maximum number of messages to receive before closing the WebSocket.
 
-|Type     |Required|Position|PipelineInput|
-|---------|--------|--------|-------------|
-|`[Int64]`|false   |named   |false        |
+|Type     |Required|Position|PipelineInput        |
+|---------|--------|--------|---------------------|
+|`[Int64]`|false   |named   |true (ByPropertyName)|
+
+#### **ThrottleLimit**
+The throttle limit used when creating background jobs.
+
+|Type     |Required|Position|PipelineInput        |
+|---------|--------|--------|---------------------|
+|`[Int32]`|false   |named   |true (ByPropertyName)|
 
 #### **ConnectionTimeout**
 The maximum time to wait for a connection to be established.
 By default, this is 7 seconds.
 
-|Type        |Required|Position|PipelineInput|
-|------------|--------|--------|-------------|
-|`[TimeSpan]`|false   |named   |false        |
+|Type        |Required|Position|PipelineInput        |
+|------------|--------|--------|---------------------|
+|`[TimeSpan]`|false   |named   |true (ByPropertyName)|
 
 #### **Runspace**
 The Runspace where the handler should run.
 Runspaces allow you to limit the scope of the handler.
 
-|Type        |Required|Position|PipelineInput|
-|------------|--------|--------|-------------|
-|`[Runspace]`|false   |named   |false        |
+|Type        |Required|Position|PipelineInput        |
+|------------|--------|--------|---------------------|
+|`[Runspace]`|false   |named   |true (ByPropertyName)|
 
 #### **RunspacePool**
 The RunspacePool where the handler should run.
 RunspacePools allow you to limit the scope of the handler to a pool of runspaces.
 
-|Type            |Required|Position|PipelineInput|Aliases|
-|----------------|--------|--------|-------------|-------|
-|`[RunspacePool]`|false   |named   |false        |Pool   |
+|Type            |Required|Position|PipelineInput        |Aliases|
+|----------------|--------|--------|---------------------|-------|
+|`[RunspacePool]`|false   |named   |true (ByPropertyName)|Pool   |
+
+#### **IncludeTotalCount**
+
+|Type      |Required|Position|PipelineInput|
+|----------|--------|--------|-------------|
+|`[Switch]`|false   |named   |false        |
+
+#### **Skip**
+
+|Type      |Required|Position|PipelineInput|
+|----------|--------|--------|-------------|
+|`[UInt64]`|false   |named   |false        |
+
+#### **First**
+
+|Type      |Required|Position|PipelineInput|
+|----------|--------|--------|-------------|
+|`[UInt64]`|false   |named   |false        |
 
 ---
 
 ### Syntax
 ```PowerShell
-Get-WebSocket [[-WebSocketUri] <Uri>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Watch] [-RawText] [-Binary] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-PSTypeName <String[]>] [-Maximum <Int64>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [<CommonParameters>]
+Get-WebSocket [[-SocketUrl] <Uri>] [-QueryParameter <IDictionary>] [-Handler <ScriptBlock>] [-ForwardEvent] [-Variable <IDictionary>] [-Header <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-Broadcast <PSObject>] [-OnConnect <ScriptBlock>] [-OnError <ScriptBlock>] [-OnOutput <ScriptBlock>] [-OnWarning <ScriptBlock>] [-Authenticate <PSObject>] [-Handshake <PSObject>] [-Watch] [-RawText] [-Binary] [-Force] [-SubProtocol <String>] [-NoSubProtocol] [-Filter <PSObject[]>] [-WatchFor <IDictionary>] [-TimeOut <TimeSpan>] [-PSTypeName <String[]>] [-Maximum <Int64>] [-ThrottleLimit <Int32>] [-ConnectionTimeout <TimeSpan>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [-IncludeTotalCount] [-Skip <UInt64>] [-First <UInt64>] [<CommonParameters>]
+```
+```PowerShell
+Get-WebSocket -RootUrl <String[]> [-Route <IDictionary>] [-HTML <String>] [-PaletteName <String>] [-GoogleFont <String>] [-CodeFont <String>] [-JavaScript <String[]>] [-ImportMap <IDictionary>] [-Handler <ScriptBlock>] [-Variable <IDictionary>] [-Header <IDictionary>] [-Name <String>] [-InitializationScript <ScriptBlock>] [-BufferSize <Int32>] [-Broadcast <PSObject>] [-Force] [-TimeOut <TimeSpan>] [-Maximum <Int64>] [-ThrottleLimit <Int32>] [-Runspace <Runspace>] [-RunspacePool <RunspacePool>] [-IncludeTotalCount] [-Skip <UInt64>] [-First <UInt64>] [<CommonParameters>]
 ```
