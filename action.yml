@@ -55,16 +55,16 @@ runs:
       id: WebSocketAction
       shell: pwsh
       env: 
-        CommitMessage: ${{inputs.CommitMessage}}
         SkipScriptFile: ${{inputs.SkipScriptFile}}
-        InstallModule: ${{inputs.InstallModule}}
-        Run: ${{inputs.Run}}
         TargetBranch: ${{inputs.TargetBranch}}
-        NoPush: ${{inputs.NoPush}}
-        GitHubToken: ${{inputs.GitHubToken}}
-        UserEmail: ${{inputs.UserEmail}}
         NoCommit: ${{inputs.NoCommit}}
+        CommitMessage: ${{inputs.CommitMessage}}
+        InstallModule: ${{inputs.InstallModule}}
+        GitHubToken: ${{inputs.GitHubToken}}
+        NoPush: ${{inputs.NoPush}}
         UserName: ${{inputs.UserName}}
+        Run: ${{inputs.Run}}
+        UserEmail: ${{inputs.UserEmail}}
         ActionScript: ${{inputs.ActionScript}}
       run: |
         $Parameters = @{}
@@ -174,7 +174,7 @@ runs:
         
         
         $anyFilesChanged = $false
-        $ActionModuleName = 'PSJekyll'
+        $ActionModuleName = 'WebSocket'
         $actorInfo = $null
         
         
